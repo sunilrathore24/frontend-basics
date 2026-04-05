@@ -1,0 +1,86 @@
+<div class="search-bar-container" (clickOutside)="onClickOutside()">
+  <!-- Search Input -->
+  <div class="search-input-wrapper">
+    <span class="search-icon">🔍</span>
+    <input
+      type="text"
+      [formControl]="searchControl"
+      [placeholder]="placeholder"
+      class="search-input"
+      (click)="onInputClick()"
+      (focus)="onInputFocus()"
+      (keydown)="onKeyDown($event)"
+      [attr.aria-expanded]="isOpen"
+      [attr.aria-autocomplete]="'list'"
+      [attr.aria-controls]="'suggestions-list'"
+      [attr.aria-activedescendant]="selectedIndex >= 0 ? 'suggestion-' + selectedIndex : null"
+      role="combobox"
+      autocomplete="off"
+    />
+    
+    <!-- Clear Button -->
+    <button
+      *ngIf="currentQuery"
+      class="clear-button"
+      (click)="clearSearch()"
+      type="button"
+      aria-label="Clear search"
+    >
+      ✕
+    </button>
+    
+    <!-- Loading Spinner -->
+    <span *ngIf="isLoading" class="loading-spinner">⏳</span>
+  </div>
+
+  <!-- Suggestions Dropdown -->
+  <div
+    *ngIf="isOpen && filteredSuggestions.length > 0"
+    class="suggestions-dropdown"
+    id="suggestions-list"
+    role="listbox"
+  >
+    <div
+      *ngFor="let item of filteredSuggestions; let i = index; trackBy: trackByFn"
+      class="suggestion-item"
+      [class.selected]="i === selectedIndex"
+      [id]="'suggestion-' + i"
+      (click)="selectSuggestion(item)"
+      (mouseenter)="selectedIndex = i"
+      role="option"
+      [attr.aria-selected]="i === selectedIndex"
+    >
+      <div class="suggestion-content">
+        <span *ngIf="item.icon" class="suggestion-icon">{{ item.icon }}</span>
+        <div class="suggestion-text">
+          <div class="suggestion-title" [innerHTML]="item.title | highlight: currentQuery"></div>
+          <div class="suggestion-description" *ngIf="item.description">
+            {{ item.description }}
+          </div>
+        </div>
+        <span *ngIf="item.category" class="suggestion-category">{{ item.category }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- No Results -->
+  <div
+    *ngIf="isOpen && currentQuery.length >= minCharsForSuggestions && filteredSuggestions.length === 0 && !isLoading"
+    class="suggestions-dropdown"
+  >
+    <div class="no-results">
+      <span class="no-results-icon">🔍</span>
+      <div class="no-results-text">No results found for "{{ currentQuery }}"</div>
+    </div>
+  </div>
+
+  <!-- Minimum Characters Message -->
+  <div
+    *ngIf="isOpen && currentQuery.length > 0 && currentQuery.length < minCharsForSuggestions"
+    class="suggestions-dropdown"
+  >
+    <div class="min-chars-message">
+      Type at least {{ minCharsForSuggestions }} characters to search
+    </div>
+  </div>
+</div>
