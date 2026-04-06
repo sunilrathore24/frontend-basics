@@ -106,46 +106,54 @@ class DocumentListRenderer {
 
 /**
  * ContentRenderer - Displays document content with syntax highlighting
- * 
- * Renders document HTML in the content area, applies Prism.js syntax
- * highlighting, and manages scroll position.
- * 
- * Requirements: 2.3, 3.3, 4.4, 6.1, 6.2, 6.3, 10.3, 10.5
  */
 class ContentRenderer {
   constructor(containerElement) {
     this.container = containerElement;
+    this._bindAnchorLinks();
   }
-  
-  /**
-   * Renders document HTML content
-   * @param {Object} document - Document to render
-   */
-  render(document) {
-    if (!document) {
+
+  render(doc) {
+    if (!doc) {
       this.container.innerHTML = '<p style="color: #999;">Document not found</p>';
       return;
     }
-    
-    this.container.innerHTML = document.html;
+    this.container.innerHTML = doc.html;
     this.applySyntaxHighlighting();
     this.scrollToTop();
   }
-  
-  /**
-   * Applies Prism.js syntax highlighting to code blocks
-   */
+
   applySyntaxHighlighting() {
     if (typeof Prism !== 'undefined') {
       Prism.highlightAllUnder(this.container);
     }
   }
-  
-  /**
-   * Scrolls content area to top
-   */
+
   scrollToTop() {
     this.container.scrollTop = 0;
+  }
+
+  /**
+   * Fix Bug 1: intercept anchor clicks and scroll within the content area
+   * instead of letting the browser try to navigate the whole page.
+   */
+  _bindAnchorLinks() {
+    this.container.addEventListener('click', (e) => {
+      const anchor = e.target.closest('a[href^="#"]');
+      if (!anchor) return;
+      e.preventDefault();
+      const id = decodeURIComponent(anchor.getAttribute('href').slice(1));
+      // Try exact id match first, then a slugified match
+      let target = this.container.querySelector('#' + CSS.escape(id));
+      if (!target) {
+        // marked.js generates ids like "what-is-torque" from heading text
+        const slug = id.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
+        target = this.container.querySelector('#' + CSS.escape(slug));
+      }
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
   }
 }
 
@@ -162,9 +170,10 @@ class App {
     this.state = {
       activeTab: 'sailpoint',
       activeDocumentId: null,
-      documents: SITE_CONTENT  // Injected by build process
+      documents: SITE_CONTENT
     };
-    
+    this.sidebarOpen = true;
+
     this.tabController = new TabNavigationController(this.state.documents);
     this.docListRenderer = new DocumentListRenderer(
       document.getElementById('document-list-container'),
@@ -173,51 +182,70 @@ class App {
     this.contentRenderer = new ContentRenderer(
       document.getElementById('content-container')
     );
-    
+
     this.init();
   }
-  
-  /**
-   * Initializes the application
-   */
+
   init() {
-    // Set up tab click handlers
+    // Tab clicks
     document.querySelectorAll('.tab-button').forEach(btn => {
       btn.addEventListener('click', (e) => {
         this.switchTab(e.target.dataset.tab);
       });
     });
-    
-    // Load default tab
+
+    // Bug 2a: sidebar toggle button
+    const toggleBtn = document.getElementById('sidebar-toggle');
+    if (toggleBtn) {
+      toggleBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.toggleSidebar();
+      });
+    }
+
+    // Bug 2b: clicking anywhere on the content area closes the sidebar
+    const contentArea = document.getElementById('content-container');
+    if (contentArea) {
+      contentArea.addEventListener('click', () => {
+        if (this.sidebarOpen) this.closeSidebar();
+      });
+    }
+
     this.switchTab('sailpoint');
   }
-  
-  /**
-   * Switches to specified tab and loads documents
-   * @param {string} tabName - Tab identifier
-   */
+
+  toggleSidebar() {
+    this.sidebarOpen ? this.closeSidebar() : this.openSidebar();
+  }
+
+  openSidebar() {
+    this.sidebarOpen = true;
+    document.querySelector('.document-list').classList.remove('sidebar-closed');
+    const btn = document.getElementById('sidebar-toggle');
+    if (btn) btn.setAttribute('aria-expanded', 'true');
+  }
+
+  closeSidebar() {
+    this.sidebarOpen = false;
+    document.querySelector('.document-list').classList.add('sidebar-closed');
+    const btn = document.getElementById('sidebar-toggle');
+    if (btn) btn.setAttribute('aria-expanded', 'false');
+  }
+
   switchTab(tabName) {
     this.state.activeTab = tabName;
     this.tabController.switchTab(tabName);
     const docs = this.tabController.getActiveDocuments();
     this.docListRenderer.render(docs);
-    
-    // Select first document by default
     if (docs.length > 0) {
       this.selectDocument(docs[0].id);
     } else {
       this.contentRenderer.render(null);
     }
   }
-  
-  /**
-   * Selects and displays a document
-   * @param {string} docId - Document ID
-   */
+
   selectDocument(docId) {
-    const doc = this.state.documents[this.state.activeTab]
-      .find(d => d.id === docId);
-    
+    const doc = this.state.documents[this.state.activeTab].find(d => d.id === docId);
     if (doc) {
       this.state.activeDocumentId = docId;
       this.docListRenderer.setActiveDocument(docId);
@@ -226,7 +254,6 @@ class App {
   }
 }
 
-// Initialize app when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
   new App();
 });

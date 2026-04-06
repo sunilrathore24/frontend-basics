@@ -14,23 +14,26 @@
       <button class="tab-button" data-tab="architect">Architect Level</button>
       <button class="tab-button" data-tab="other">Other Frontend</button>
     </nav>
-    
+
     <!-- Main Content Area -->
     <div class="main-content">
+      <!-- Sidebar toggle button -->
+      <button id="sidebar-toggle" class="sidebar-toggle" aria-expanded="true" aria-label="Toggle sidebar">&#9664;</button>
+
       <!-- Document List Sidebar -->
       <aside class="document-list">
         <ul id="document-list-container">
           <!-- Populated by JavaScript -->
         </ul>
       </aside>
-      
+
       <!-- Content Display -->
       <main class="content-area" id="content-container">
         <!-- Document content rendered here -->
       </main>
     </div>
   </div>
-  
+
   <script src="app.js"></script>
 </body>
 </html>

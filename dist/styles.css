@@ -59,11 +59,50 @@ body {
 
 /* Document List Sidebar */
 .document-list {
-  width: 300px;
+  width: 280px;
+  min-width: 280px;
   background-color: #fff;
   border-right: 1px solid #ddd;
   overflow-y: auto;
   box-shadow: 2px 0 4px rgba(0,0,0,0.05);
+  transition: width 0.25s ease, min-width 0.25s ease;
+  position: relative;
+}
+
+.document-list.sidebar-closed {
+  width: 0;
+  min-width: 0;
+  overflow: hidden;
+  border-right: none;
+}
+
+/* Sidebar toggle button */
+.sidebar-toggle {
+  position: fixed;
+  top: 60px;
+  left: 280px;
+  z-index: 100;
+  width: 24px;
+  height: 48px;
+  background: #2c3e50;
+  color: #fff;
+  border: none;
+  border-radius: 0 6px 6px 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  transition: left 0.25s ease, background 0.2s;
+  box-shadow: 2px 0 4px rgba(0,0,0,0.2);
+}
+
+.sidebar-toggle:hover {
+  background: #3498db;
+}
+
+.sidebar-toggle[aria-expanded="false"] {
+  left: 0;
 }
 
 #document-list-container {
@@ -196,26 +235,158 @@ body {
     padding: 0.75rem 1rem;
     font-size: 0.9rem;
   }
-  
+
   .main-content {
     flex-direction: column;
   }
-  
+
   .document-list {
     width: 100%;
+    min-width: 0;
     max-height: 200px;
     border-right: none;
     border-bottom: 1px solid #ddd;
+    transition: max-height 0.25s ease;
   }
-  
+
+  .document-list.sidebar-closed {
+    max-height: 0;
+    width: 100%;
+    border-bottom: none;
+  }
+
+  .sidebar-toggle {
+    top: auto;
+    bottom: 16px;
+    left: 16px;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    font-size: 1rem;
+  }
+
+  .sidebar-toggle[aria-expanded="false"] {
+    left: 16px;
+  }
+
   .content-area {
     padding: 1rem;
   }
-  
+
   .content-area pre {
     font-size: 0.85rem;
   }
 }
+
+/* Prism.js Tomorrow Night Theme */
+code[class*="language-"],
+pre[class*="language-"] {
+  color: #ccc;
+  background: none;
+  font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
+  font-size: 1em;
+  text-align: left;
+  white-space: pre;
+  word-spacing: normal;
+  word-break: normal;
+  word-wrap: normal;
+  line-height: 1.5;
+  tab-size: 4;
+  hyphens: none;
+}
+
+pre[class*="language-"] {
+  padding: 1em;
+  margin: .5em 0;
+  overflow: auto;
+}
+
+:not(pre) > code[class*="language-"],
+pre[class*="language-"] {
+  background: #2d2d2d;
+}
+
+:not(pre) > code[class*="language-"] {
+  padding: .1em;
+  border-radius: .3em;
+  white-space: normal;
+}
+
+.token.comment,
+.token.block-comment,
+.token.prolog,
+.token.doctype,
+.token.cdata {
+  color: #999;
+}
+
+.token.punctuation {
+  color: #ccc;
+}
+
+.token.tag,
+.token.attr-name,
+.token.namespace,
+.token.deleted {
+  color: #e2777a;
+}
+
+.token.function-name {
+  color: #6196cc;
+}
+
+.token.boolean,
+.token.number,
+.token.function {
+  color: #f08d49;
+}
+
+.token.property,
+.token.class-name,
+.token.constant,
+.token.symbol {
+  color: #f8c555;
+}
+
+.token.selector,
+.token.important,
+.token.atrule,
+.token.keyword,
+.token.builtin {
+  color: #cc99cd;
+}
+
+.token.string,
+.token.char,
+.token.attr-value,
+.token.regex,
+.token.variable {
+  color: #7ec699;
+}
+
+.token.operator,
+.token.entity,
+.token.url {
+  color: #67cdcc;
+}
+
+.token.important,
+.token.bold {
+  font-weight: bold;
+}
+
+.token.italic {
+  font-style: italic;
+}
+
+.token.entity {
+  cursor: help;
+}
+
+.token.inserted {
+  color: green;
+}
+
 
 /* Prism.js Tomorrow Night Theme */
 code[class*="language-"],
