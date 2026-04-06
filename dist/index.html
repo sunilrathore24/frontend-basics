@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Frontend Documentation</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Tab Navigation -->
+    <nav class="tab-navigation">
+      <button class="tab-button active" data-tab="sailpoint">Sailpoint</button>
+      <button class="tab-button" data-tab="architect">Architect Level</button>
+      <button class="tab-button" data-tab="other">Other Frontend</button>
+    </nav>
+    
+    <!-- Main Content Area -->
+    <div class="main-content">
+      <!-- Document List Sidebar -->
+      <aside class="document-list">
+        <ul id="document-list-container">
+          <!-- Populated by JavaScript -->
+        </ul>
+      </aside>
+      
+      <!-- Content Display -->
+      <main class="content-area" id="content-container">
+        <!-- Document content rendered here -->
+      </main>
+    </div>
+  </div>
+  
+  <script src="app.js"></script>
+</body>
+</html>

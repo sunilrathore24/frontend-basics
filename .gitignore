@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Build artifacts (we'll commit dist for GitHub Pages)
+# Uncomment the line below if you don't want to commit dist/
+# dist/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment
+.env
+.env.local
