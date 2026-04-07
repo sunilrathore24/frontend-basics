@@ -3357,6 +3357,7 @@ class App {
         this._applyTab(tab);
         const docs = this.tabController.getActiveDocuments();
         const firstId = docs[0] ? docs[0].id : '';
+        if (firstId) this._applyDoc(firstId);  // auto-select first doc
         this._setHash(tab, firstId);
       });
     });
