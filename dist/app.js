@@ -3207,7 +3207,7 @@ Prism.languages.webmanifest = Prism.languages.json;
 }(Prism));
 
 
-// ─── Utility: generate the same slug marked.js uses for heading IDs ───────────
+// ─── Utility: generate slug matching marked.js TOC link format ───────────────
 function slugify(text) {
   return text.toLowerCase().trim()
     .replace(/[\s]+/g, '-')
@@ -3278,19 +3278,19 @@ class ContentRenderer {
       return;
     }
     this.container.innerHTML = doc.html;
-    this._fixHeadingIds();
+    this._stampHeadingIds();
     this.applySyntaxHighlighting();
-    this.scrollToTop();
+    this.container.scrollTop = 0;
   }
 
   /**
-   * marked.js sometimes generates IDs with extra chars or inconsistent casing.
-   * Re-stamp every heading with a clean, predictable slug so TOC links work.
+   * marked.js (v11) does NOT add id attributes to headings by default.
+   * We stamp each heading with a slug that matches the TOC href format.
+   * e.g. "Section 1: Advanced JavaScript" → id="section-1-advanced-javascript"
    */
-  _fixHeadingIds() {
+  _stampHeadingIds() {
     this.container.querySelectorAll('h1,h2,h3,h4,h5,h6').forEach(h => {
-      const slug = slugify(h.textContent);
-      h.id = slug;
+      h.id = slugify(h.textContent);
     });
   }
 
@@ -3298,29 +3298,30 @@ class ContentRenderer {
     if (typeof Prism !== 'undefined') Prism.highlightAllUnder(this.container);
   }
 
-  scrollToTop() {
-    this.container.scrollTop = 0;
-  }
-
   /**
-   * Intercept #anchor clicks and scroll within the content area.
-   * Also handles TOC links that use heading text as the fragment.
+   * Intercept #anchor clicks.
+   * scrollIntoView() scrolls the viewport — we need to scroll the content div.
    */
   _bindAnchorLinks() {
     this.container.addEventListener('click', (e) => {
       const anchor = e.target.closest('a[href^="#"]');
       if (!anchor) return;
       e.preventDefault();
+
       const raw = decodeURIComponent(anchor.getAttribute('href').slice(1));
       const slug = slugify(raw);
 
-      // Try slug first, then raw id
+      // Try slug first (matches our stamped IDs), then raw
       const target =
         this.container.querySelector('#' + CSS.escape(slug)) ||
         this.container.querySelector('#' + CSS.escape(raw));
 
       if (target) {
-        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // Scroll within the content div, not the whole page
+        const containerTop = this.container.getBoundingClientRect().top;
+        const targetTop = target.getBoundingClientRect().top;
+        const offset = targetTop - containerTop;
+        this.container.scrollBy({ top: offset - 16, behavior: 'smooth' });
       }
     });
   }
@@ -3335,12 +3336,11 @@ class App {
       documents: SITE_CONTENT
     };
     this.sidebarOpen = true;
-    this._skipHashUpdate = false; // prevent loop when we set hash ourselves
 
     this.tabController = new TabNavigationController(this.state.documents);
     this.docListRenderer = new DocumentListRenderer(
       document.getElementById('document-list-container'),
-      (docId) => this.selectDocument(docId, true)
+      (docId) => this._onSidebarDocClick(docId)
     );
     this.contentRenderer = new ContentRenderer(
       document.getElementById('content-container')
@@ -3350,10 +3350,14 @@ class App {
   }
 
   init() {
-    // Tab clicks
+    // Tab button clicks → update URL
     document.querySelectorAll('.tab-button').forEach(btn => {
       btn.addEventListener('click', (e) => {
-        this.switchTab(e.target.dataset.tab, true);
+        const tab = e.target.dataset.tab;
+        this._applyTab(tab);
+        const docs = this.tabController.getActiveDocuments();
+        const firstId = docs[0] ? docs[0].id : '';
+        this._setHash(tab, firstId);
       });
     });
 
@@ -3367,85 +3371,78 @@ class App {
     }
 
     // Auto-close sidebar on content click
-    const contentArea = document.getElementById('content-container');
-    if (contentArea) {
-      contentArea.addEventListener('click', () => {
-        if (this.sidebarOpen) this.closeSidebar();
-      });
-    }
+    document.getElementById('content-container').addEventListener('click', () => {
+      if (this.sidebarOpen) this.closeSidebar();
+    });
 
-    // ── URL routing: listen for hash changes (back/forward, direct links) ──
-    window.addEventListener('hashchange', () => this._loadFromHash());
+    // Hash-based routing: back/forward + direct links
+    window.addEventListener('hashchange', () => this._loadFromHash(false));
 
-    // Load from URL hash on startup, or default to first tab/doc
-    this._loadFromHash();
+    // Initial load
+    this._loadFromHash(true);
   }
 
-  // ── Hash format:  #tab/docId   e.g.  #sailpoint/SAILPOINT_SENIOR_STAFF...
-  _loadFromHash() {
-    const hash = window.location.hash.slice(1); // strip leading #
-    if (!hash) {
-      this._switchTabInternal('sailpoint');
-      return;
-    }
-    const [tab, ...rest] = hash.split('/');
-    const docId = rest.join('/'); // doc IDs may contain slashes (unlikely but safe)
-    const validTabs = ['sailpoint', 'architect', 'other'];
-
-    if (validTabs.includes(tab)) {
-      this._switchTabInternal(tab);
-      if (docId) {
-        this._selectDocumentInternal(docId);
-      }
-    } else {
-      this._switchTabInternal('sailpoint');
-    }
+  // ── Called when user clicks a doc in the sidebar ──────────────────────────
+  _onSidebarDocClick(docId) {
+    this._applyDoc(docId);
+    this._setHash(this.state.activeTab, docId);
   }
 
-  _updateHash(tab, docId) {
+  // ── Update the URL hash without triggering hashchange ─────────────────────
+  _setHash(tab, docId) {
     const newHash = '#' + tab + (docId ? '/' + docId : '');
     if (window.location.hash !== newHash) {
       history.pushState(null, '', newHash);
     }
   }
 
-  // Internal switch — does NOT push to history (called from hashchange)
-  _switchTabInternal(tabName) {
+  // ── Parse hash and load the right tab + doc ───────────────────────────────
+  _loadFromHash(isInitial) {
+    const hash = window.location.hash.slice(1);
+    const validTabs = ['sailpoint', 'architect', 'other'];
+
+    if (!hash) {
+      this._applyTab('sailpoint');
+      const docs = this.tabController.getActiveDocuments();
+      if (docs.length) this._applyDoc(docs[0].id);
+      if (isInitial) this._setHash('sailpoint', docs[0] ? docs[0].id : '');
+      return;
+    }
+
+    const slashIdx = hash.indexOf('/');
+    const tab = slashIdx === -1 ? hash : hash.slice(0, slashIdx);
+    const docId = slashIdx === -1 ? '' : hash.slice(slashIdx + 1);
+
+    if (!validTabs.includes(tab)) {
+      this._applyTab('sailpoint');
+      return;
+    }
+
+    this._applyTab(tab);
+
+    if (docId) {
+      this._applyDoc(docId);
+    } else {
+      const docs = this.tabController.getActiveDocuments();
+      if (docs.length) this._applyDoc(docs[0].id);
+    }
+  }
+
+  // ── Apply a tab (UI only, no URL change) ──────────────────────────────────
+  _applyTab(tabName) {
     this.state.activeTab = tabName;
     this.tabController.switchTab(tabName);
     const docs = this.tabController.getActiveDocuments();
     this.docListRenderer.render(docs);
-    if (docs.length > 0) {
-      this._selectDocumentInternal(docs[0].id);
-    } else {
-      this.contentRenderer.render(null);
-    }
   }
 
-  // Internal select — does NOT push to history (called from hashchange)
-  _selectDocumentInternal(docId) {
+  // ── Apply a document (UI only, no URL change) ─────────────────────────────
+  _applyDoc(docId) {
     const doc = this.state.documents[this.state.activeTab]?.find(d => d.id === docId);
     if (doc) {
       this.state.activeDocumentId = docId;
       this.docListRenderer.setActiveDocument(docId);
       this.contentRenderer.render(doc);
-    }
-  }
-
-  // Public switch — pushes to history (called from tab button clicks)
-  switchTab(tabName, updateUrl = false) {
-    this._switchTabInternal(tabName);
-    if (updateUrl) {
-      const docs = this.tabController.getActiveDocuments();
-      this._updateHash(tabName, docs[0]?.id || '');
-    }
-  }
-
-  // Public select — pushes to history (called from sidebar clicks)
-  selectDocument(docId, updateUrl = false) {
-    this._selectDocumentInternal(docId);
-    if (updateUrl) {
-      this._updateHash(this.state.activeTab, docId);
     }
   }
 
