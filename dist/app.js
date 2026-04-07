@@ -3207,115 +3207,65 @@ Prism.languages.webmanifest = Prism.languages.json;
 }(Prism));
 
 
-/**
- * TabNavigationController - Manages tab state and UI updates
- * 
- * Handles tab switching, maintains active tab state, and coordinates
- * UI updates for the tab navigation system.
- * 
- * Requirements: 1.1, 1.2, 1.3, 1.5
- */
+// ─── Utility: generate the same slug marked.js uses for heading IDs ───────────
+function slugify(text) {
+  return text.toLowerCase().trim()
+    .replace(/[\s]+/g, '-')
+    .replace(/[^\w-]/g, '');
+}
+
+// ─── TabNavigationController ──────────────────────────────────────────────────
 class TabNavigationController {
   constructor(contentData) {
     this.contentData = contentData;
-    this.activeTab = 'sailpoint';  // Default tab
+    this.activeTab = 'sailpoint';
   }
-  
-  /**
-   * Switches to specified tab
-   * @param {string} tabName - Tab identifier (sailpoint|architect|other)
-   */
+
   switchTab(tabName) {
     this.activeTab = tabName;
-    this.updateTabUI();
-  }
-  
-  /**
-   * Updates tab visual indicators (active/inactive)
-   */
-  updateTabUI() {
     document.querySelectorAll('.tab-button').forEach(btn => {
-      if (btn.dataset.tab === this.activeTab) {
-        btn.classList.add('active');
-      } else {
-        btn.classList.remove('active');
-      }
+      btn.classList.toggle('active', btn.dataset.tab === tabName);
     });
   }
-  
-  /**
-   * Gets documents for active tab
-   * @returns {Array} Documents for current tab
-   */
+
   getActiveDocuments() {
     return this.contentData[this.activeTab] || [];
   }
 }
 
-/**
- * DocumentListRenderer - Displays and manages document navigation
- * 
- * Renders the document list for the active tab, handles document selection,
- * and maintains visual indicators for the active document.
- * 
- * Requirements: 2.1, 3.1, 4.1, 10.1, 10.2, 10.4
- */
+// ─── DocumentListRenderer ─────────────────────────────────────────────────────
 class DocumentListRenderer {
   constructor(containerElement, onDocumentSelect) {
     this.container = containerElement;
     this.onDocumentSelect = onDocumentSelect;
     this.activeDocumentId = null;
   }
-  
-  /**
-   * Renders list of documents
-   * @param {Array} documents - Documents to display
-   */
+
   render(documents) {
     this.container.innerHTML = '';
-    
-    if (documents.length === 0) {
-      this.container.innerHTML = '<li style="padding: 1rem; color: #999;">No documents available</li>';
+    if (!documents.length) {
+      this.container.innerHTML = '<li style="padding:1rem;color:#999">No documents available</li>';
       return;
     }
-    
     documents.forEach(doc => {
       const li = document.createElement('li');
       li.textContent = doc.title;
       li.dataset.docId = doc.id;
-      
-      if (doc.id === this.activeDocumentId) {
-        li.classList.add('active');
-      }
-      
-      li.addEventListener('click', () => {
-        this.onDocumentSelect(doc.id);
-      });
-      
+      if (doc.id === this.activeDocumentId) li.classList.add('active');
+      li.addEventListener('click', () => this.onDocumentSelect(doc.id));
       this.container.appendChild(li);
     });
   }
-  
-  /**
-   * Highlights selected document
-   * @param {string} documentId - ID of active document
-   */
+
   setActiveDocument(documentId) {
     this.activeDocumentId = documentId;
-    
     this.container.querySelectorAll('li').forEach(li => {
-      if (li.dataset.docId === documentId) {
-        li.classList.add('active');
-      } else {
-        li.classList.remove('active');
-      }
+      li.classList.toggle('active', li.dataset.docId === documentId);
     });
   }
 }
 
-/**
- * ContentRenderer - Displays document content with syntax highlighting
- */
+// ─── ContentRenderer ──────────────────────────────────────────────────────────
 class ContentRenderer {
   constructor(containerElement) {
     this.container = containerElement;
@@ -3324,18 +3274,28 @@ class ContentRenderer {
 
   render(doc) {
     if (!doc) {
-      this.container.innerHTML = '<p style="color: #999;">Document not found</p>';
+      this.container.innerHTML = '<p style="color:#999">Document not found</p>';
       return;
     }
     this.container.innerHTML = doc.html;
+    this._fixHeadingIds();
     this.applySyntaxHighlighting();
     this.scrollToTop();
   }
 
+  /**
+   * marked.js sometimes generates IDs with extra chars or inconsistent casing.
+   * Re-stamp every heading with a clean, predictable slug so TOC links work.
+   */
+  _fixHeadingIds() {
+    this.container.querySelectorAll('h1,h2,h3,h4,h5,h6').forEach(h => {
+      const slug = slugify(h.textContent);
+      h.id = slug;
+    });
+  }
+
   applySyntaxHighlighting() {
-    if (typeof Prism !== 'undefined') {
-      Prism.highlightAllUnder(this.container);
-    }
+    if (typeof Prism !== 'undefined') Prism.highlightAllUnder(this.container);
   }
 
   scrollToTop() {
@@ -3343,22 +3303,22 @@ class ContentRenderer {
   }
 
   /**
-   * Fix Bug 1: intercept anchor clicks and scroll within the content area
-   * instead of letting the browser try to navigate the whole page.
+   * Intercept #anchor clicks and scroll within the content area.
+   * Also handles TOC links that use heading text as the fragment.
    */
   _bindAnchorLinks() {
     this.container.addEventListener('click', (e) => {
       const anchor = e.target.closest('a[href^="#"]');
       if (!anchor) return;
       e.preventDefault();
-      const id = decodeURIComponent(anchor.getAttribute('href').slice(1));
-      // Try exact id match first, then a slugified match
-      let target = this.container.querySelector('#' + CSS.escape(id));
-      if (!target) {
-        // marked.js generates ids like "what-is-torque" from heading text
-        const slug = id.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
-        target = this.container.querySelector('#' + CSS.escape(slug));
-      }
+      const raw = decodeURIComponent(anchor.getAttribute('href').slice(1));
+      const slug = slugify(raw);
+
+      // Try slug first, then raw id
+      const target =
+        this.container.querySelector('#' + CSS.escape(slug)) ||
+        this.container.querySelector('#' + CSS.escape(raw));
+
       if (target) {
         target.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
@@ -3366,14 +3326,7 @@ class ContentRenderer {
   }
 }
 
-/**
- * App - Main application class
- * 
- * Coordinates all components, manages application state, and handles
- * user interactions for tab switching and document selection.
- * 
- * Requirements: 1.5, 10.3
- */
+// ─── App ──────────────────────────────────────────────────────────────────────
 class App {
   constructor() {
     this.state = {
@@ -3382,11 +3335,12 @@ class App {
       documents: SITE_CONTENT
     };
     this.sidebarOpen = true;
+    this._skipHashUpdate = false; // prevent loop when we set hash ourselves
 
     this.tabController = new TabNavigationController(this.state.documents);
     this.docListRenderer = new DocumentListRenderer(
       document.getElementById('document-list-container'),
-      (docId) => this.selectDocument(docId)
+      (docId) => this.selectDocument(docId, true)
     );
     this.contentRenderer = new ContentRenderer(
       document.getElementById('content-container')
@@ -3399,11 +3353,11 @@ class App {
     // Tab clicks
     document.querySelectorAll('.tab-button').forEach(btn => {
       btn.addEventListener('click', (e) => {
-        this.switchTab(e.target.dataset.tab);
+        this.switchTab(e.target.dataset.tab, true);
       });
     });
 
-    // Bug 2a: sidebar toggle button
+    // Sidebar toggle
     const toggleBtn = document.getElementById('sidebar-toggle');
     if (toggleBtn) {
       toggleBtn.addEventListener('click', (e) => {
@@ -3412,7 +3366,7 @@ class App {
       });
     }
 
-    // Bug 2b: clicking anywhere on the content area closes the sidebar
+    // Auto-close sidebar on content click
     const contentArea = document.getElementById('content-container');
     if (contentArea) {
       contentArea.addEventListener('click', () => {
@@ -3420,7 +3374,79 @@ class App {
       });
     }
 
-    this.switchTab('sailpoint');
+    // ── URL routing: listen for hash changes (back/forward, direct links) ──
+    window.addEventListener('hashchange', () => this._loadFromHash());
+
+    // Load from URL hash on startup, or default to first tab/doc
+    this._loadFromHash();
+  }
+
+  // ── Hash format:  #tab/docId   e.g.  #sailpoint/SAILPOINT_SENIOR_STAFF...
+  _loadFromHash() {
+    const hash = window.location.hash.slice(1); // strip leading #
+    if (!hash) {
+      this._switchTabInternal('sailpoint');
+      return;
+    }
+    const [tab, ...rest] = hash.split('/');
+    const docId = rest.join('/'); // doc IDs may contain slashes (unlikely but safe)
+    const validTabs = ['sailpoint', 'architect', 'other'];
+
+    if (validTabs.includes(tab)) {
+      this._switchTabInternal(tab);
+      if (docId) {
+        this._selectDocumentInternal(docId);
+      }
+    } else {
+      this._switchTabInternal('sailpoint');
+    }
+  }
+
+  _updateHash(tab, docId) {
+    const newHash = '#' + tab + (docId ? '/' + docId : '');
+    if (window.location.hash !== newHash) {
+      history.pushState(null, '', newHash);
+    }
+  }
+
+  // Internal switch — does NOT push to history (called from hashchange)
+  _switchTabInternal(tabName) {
+    this.state.activeTab = tabName;
+    this.tabController.switchTab(tabName);
+    const docs = this.tabController.getActiveDocuments();
+    this.docListRenderer.render(docs);
+    if (docs.length > 0) {
+      this._selectDocumentInternal(docs[0].id);
+    } else {
+      this.contentRenderer.render(null);
+    }
+  }
+
+  // Internal select — does NOT push to history (called from hashchange)
+  _selectDocumentInternal(docId) {
+    const doc = this.state.documents[this.state.activeTab]?.find(d => d.id === docId);
+    if (doc) {
+      this.state.activeDocumentId = docId;
+      this.docListRenderer.setActiveDocument(docId);
+      this.contentRenderer.render(doc);
+    }
+  }
+
+  // Public switch — pushes to history (called from tab button clicks)
+  switchTab(tabName, updateUrl = false) {
+    this._switchTabInternal(tabName);
+    if (updateUrl) {
+      const docs = this.tabController.getActiveDocuments();
+      this._updateHash(tabName, docs[0]?.id || '');
+    }
+  }
+
+  // Public select — pushes to history (called from sidebar clicks)
+  selectDocument(docId, updateUrl = false) {
+    this._selectDocumentInternal(docId);
+    if (updateUrl) {
+      this._updateHash(this.state.activeTab, docId);
+    }
   }
 
   toggleSidebar() {
@@ -3440,29 +3466,6 @@ class App {
     const btn = document.getElementById('sidebar-toggle');
     if (btn) btn.setAttribute('aria-expanded', 'false');
   }
-
-  switchTab(tabName) {
-    this.state.activeTab = tabName;
-    this.tabController.switchTab(tabName);
-    const docs = this.tabController.getActiveDocuments();
-    this.docListRenderer.render(docs);
-    if (docs.length > 0) {
-      this.selectDocument(docs[0].id);
-    } else {
-      this.contentRenderer.render(null);
-    }
-  }
-
-  selectDocument(docId) {
-    const doc = this.state.documents[this.state.activeTab].find(d => d.id === docId);
-    if (doc) {
-      this.state.activeDocumentId = docId;
-      this.docListRenderer.setActiveDocument(docId);
-      this.contentRenderer.render(doc);
-    }
-  }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  new App();
-});
+document.addEventListener('DOMContentLoaded', () => { new App(); });
