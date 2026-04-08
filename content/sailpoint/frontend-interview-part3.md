@@ -3148,6 +3148,196 @@ function HighlightMatch({ text, query }: { text: string; query: string }) {
 - **ARIA combobox** pattern for screen reader support
 - **`aria-activedescendant`** for virtual focus (screen reader follows keyboard)
 
+#### Angular Equivalent — Autocomplete/Typeahead Component
+
+The same autocomplete pattern implemented in Angular using RxJS for debounce, race condition handling via `switchMap`, and the ARIA combobox pattern:
+
+```typescript
+// autocomplete.service.ts
+import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
+
+export interface Identity {
+  id: string;
+  name: string;
+  email: string;
+}
+
+@Injectable({ providedIn: 'root' })
+export class IdentitySearchService {
+  constructor(private http: HttpClient) {}
+
+  search(query: string): Observable<Identity[]> {
+    return this.http.get<Identity[]>(`/api/v3/search`, {
+      params: { query, type: 'identity' }
+    });
+  }
+}
+```
+
+```typescript
+// autocomplete.component.ts
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { FormControl } from '@angular/forms';
+import { Subject } from 'rxjs';
+import {
+  debounceTime, distinctUntilChanged, filter,
+  switchMap, catchError, takeUntil, tap
+} from 'rxjs/operators';
+import { of } from 'rxjs';
+import { IdentitySearchService, Identity } from './autocomplete.service';
+
+@Component({
+  selector: 'app-identity-search',
+  templateUrl: './autocomplete.component.html',
+  styleUrls: ['./autocomplete.component.scss']
+})
+export class IdentitySearchComponent implements OnInit, OnDestroy {
+  searchControl = new FormControl('');
+  results: Identity[] = [];
+  loading = false;
+  isOpen = false;
+  activeIndex = -1;
+
+  private destroy$ = new Subject<void>();
+
+  constructor(private searchService: IdentitySearchService) {}
+
+  ngOnInit(): void {
+    this.searchControl.valueChanges.pipe(
+      debounceTime(300),
+      distinctUntilChanged(),
+      filter((query): query is string => typeof query === 'string'),
+      tap(query => {
+        if (query.length < 2) {
+          this.results = [];
+          this.isOpen = false;
+          this.loading = false;
+        }
+      }),
+      filter(query => query.length >= 2),
+      tap(() => this.loading = true),
+      // switchMap auto-cancels previous HTTP request — no race conditions
+      switchMap(query =>
+        this.searchService.search(query).pipe(
+          catchError(() => of([]))
+        )
+      ),
+      takeUntil(this.destroy$)
+    ).subscribe(results => {
+      this.results = results;
+      this.isOpen = results.length > 0;
+      this.activeIndex = -1;
+      this.loading = false;
+    });
+  }
+
+  onKeyDown(event: KeyboardEvent): void {
+    switch (event.key) {
+      case 'ArrowDown':
+        event.preventDefault();
+        this.activeIndex = Math.min(this.activeIndex + 1, this.results.length - 1);
+        break;
+      case 'ArrowUp':
+        event.preventDefault();
+        this.activeIndex = Math.max(this.activeIndex - 1, -1);
+        break;
+      case 'Enter':
+        if (this.activeIndex >= 0) {
+          this.selectIdentity(this.results[this.activeIndex]);
+        }
+        break;
+      case 'Escape':
+        this.isOpen = false;
+        break;
+    }
+  }
+
+  selectIdentity(identity: Identity): void {
+    this.searchControl.setValue(identity.name, { emitEvent: false });
+    this.isOpen = false;
+    // Emit selection to parent via @Output or service
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+}
+```
+
+```html
+<!-- autocomplete.component.html -->
+<div class="autocomplete-wrapper"
+     role="combobox"
+     [attr.aria-expanded]="isOpen"
+     aria-haspopup="listbox">
+
+  <input type="search"
+         [formControl]="searchControl"
+         aria-label="Search identities"
+         aria-autocomplete="list"
+         aria-controls="search-listbox"
+         [attr.aria-activedescendant]="activeIndex >= 0 ? 'option-' + activeIndex : null"
+         (keydown)="onKeyDown($event)"
+         placeholder="Search by name or email..." />
+
+  <span *ngIf="loading" aria-live="polite" class="loading-indicator">
+    Searching...
+  </span>
+
+  <ul *ngIf="isOpen"
+      id="search-listbox"
+      role="listbox"
+      aria-label="Search results"
+      class="results-list">
+    <li *ngFor="let identity of results; let i = index"
+        [id]="'option-' + i"
+        role="option"
+        [attr.aria-selected]="i === activeIndex"
+        [class.active]="i === activeIndex"
+        (click)="selectIdentity(identity)">
+      <span [innerHTML]="identity.name | highlight:searchControl.value"></span>
+      <span class="secondary">{{ identity.email }}</span>
+    </li>
+  </ul>
+</div>
+```
+
+```typescript
+// highlight.pipe.ts — Highlight matching text in results
+import { Pipe, PipeTransform } from '@angular/core';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+
+@Pipe({ name: 'highlight' })
+export class HighlightPipe implements PipeTransform {
+  constructor(private sanitizer: DomSanitizer) {}
+
+  transform(text: string, query: string): SafeHtml {
+    if (!query || !text) return text;
+    const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`(${escaped})`, 'gi');
+    const highlighted = text.replace(regex, '<mark>$1</mark>');
+    return this.sanitizer.bypassSecurityTrustHtml(highlighted);
+  }
+}
+```
+
+**Angular vs React — Key Differences in This Pattern:**
+
+| Aspect | React (above) | Angular |
+|---|---|---|
+| **Debounce** | Custom `useMemo` + `debounce` utility | Built-in `debounceTime` RxJS operator |
+| **Race conditions** | Manual request ID counter | `switchMap` auto-cancels previous requests |
+| **Cleanup** | `useEffect` return + `cancel()` | `takeUntil(destroy$)` pattern |
+| **Form binding** | `useState` + `onChange` | `FormControl` + `valueChanges` observable |
+| **Template** | JSX with inline conditionals | Structural directives (`*ngIf`, `*ngFor`) |
+| **Text highlight** | Component with `regex.split()` | Pipe with `innerHTML` binding |
+| **ARIA** | Identical combobox pattern | Identical combobox pattern |
+
+**Why `switchMap` is superior for autocomplete:** Unlike the React version which needs a manual request ID counter to handle race conditions, Angular's `switchMap` operator automatically unsubscribes from the previous inner observable when a new value arrives. This means if the user types "abc", the HTTP request for "ab" is cancelled before "abc" fires — zero race conditions with zero boilerplate.
+
 ---
 
 ### Q41: Design a Data Table with sorting, filtering, pagination, and virtual scroll.
