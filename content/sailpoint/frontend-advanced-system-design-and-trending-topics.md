@@ -100,9 +100,9 @@ class LRUCache<K, V> {
   aria-activedescendant="suggestion-2"
 />
 <ul id="suggestions-list" role="listbox">
-  <li id="suggestion-0" role="option">React</li>
-  <li id="suggestion-1" role="option">React Native</li>
-  <li id="suggestion-2" role="option" aria-selected="true">React Router</li>
+  <li id="suggestion-0" role="option">Angular</li>
+  <li id="suggestion-1" role="option">Angular Material</li>
+  <li id="suggestion-2" role="option" aria-selected="true">Angular CDK</li>
 </ul>
 ```
 
@@ -156,28 +156,34 @@ For feeds with real-time updates, always use cursor-based pagination.
 
 **Virtualized list (for 10K+ items):**
 
-```typescript
-// Using TanStack Virtual (framework-agnostic)
-const virtualizer = useVirtualizer({
-  count: items.length,
-  getScrollElement: () => scrollRef.current,
-  estimateSize: () => 80, // Estimated row height
-  overscan: 5, // Render 5 extra items above/below viewport
-});
-
-// Only renders ~20 items instead of 10,000
-{virtualizer.getVirtualItems().map(virtualRow => (
-  <div
-    key={virtualRow.key}
-    style={{
-      position: 'absolute',
-      top: virtualRow.start,
-      height: virtualRow.size,
-    }}
-  >
-    {items[virtualRow.index].title}
+```html
+<!-- Angular CDK Virtual Scrolling -->
+<cdk-virtual-scroll-viewport itemSize="80" class="feed-viewport">
+  <div *cdkVirtualFor="let item of items; trackBy: trackById" class="feed-item">
+    {{ item.title }}
   </div>
-))}
+</cdk-virtual-scroll-viewport>
+```
+
+```typescript
+// Component
+@Component({
+  standalone: true,
+  imports: [ScrollingModule],
+  template: `
+    <cdk-virtual-scroll-viewport itemSize="80" class="feed-viewport">
+      <div *cdkVirtualFor="let item of items(); trackBy: trackById" class="feed-item">
+        {{ item.title }}
+      </div>
+    </cdk-virtual-scroll-viewport>
+  `,
+  styles: [`.feed-viewport { height: 600px; }`]
+})
+export class FeedComponent {
+  items = signal<FeedItem[]>([]);
+  trackById = (_: number, item: FeedItem) => item.id;
+}
+// CDK virtual scroll only renders ~20 items instead of 10,000
 ```
 
 **Memory management:**
@@ -210,8 +216,8 @@ const virtualizer = useVirtualizer({
 ```
 ┌──────────┐    WebSocket     ┌──────────────┐
 │  Client  │◀───────────────▶│  WS Gateway  │
-│  (React/ │                  │  (load        │
-│  Angular)│                  │   balanced)   │
+│  (Angular/│                  │  (load        │
+│   Client) │                  │   balanced)   │
 └──────────┘                  └──────┬───────┘
      │                               │
      │ IndexedDB                     │ Message Queue
@@ -1079,17 +1085,22 @@ const routes = [
   { path: '/settings', loadComponent: () => import('./settings.component') },
 ];
 
-// 2. Component-level splitting
-const HeavyChart = lazy(() => import('./HeavyChart'));
+// 2. Component-level splitting (Angular @defer)
+// In template:
+// @defer (on viewport) {
+//   <app-heavy-chart [data]="chartData()" />
+// } @placeholder {
+//   <div class="chart-skeleton"></div>
+// }
 
 // 3. Library splitting — separate vendor chunk
-// vite.config.ts
+// angular.json or custom webpack config
 build: {
   rollupOptions: {
     output: {
       manualChunks: {
-        vendor: ['react', 'react-dom'],
-        charts: ['d3', 'recharts'],
+        vendor: ['@angular/core', '@angular/common'],
+        charts: ['d3', 'ngx-charts'],
       }
     }
   }
