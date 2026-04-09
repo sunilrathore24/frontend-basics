@@ -1,7 +1,6 @@
-# SailPoint Senior Staff UI Engineer — Behavioral, Leadership & VP Round Prep Guide
+# Behavioral, Leadership & VP Round Prep Guide
 
 > Covers: Hiring Manager / Bar Raiser Round + Final VP-Level Round
-> Role: Senior Staff UI Engineer, Pune
 > Use STAR format (Situation → Task → Action → Result) for every answer
 
 ---

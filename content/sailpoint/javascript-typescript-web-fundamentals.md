@@ -1,6 +1,6 @@
-# SailPoint Senior/Staff Front End Engineer Interview - Part 3: Non-Angular Frontend Topics
+# JavaScript, TypeScript & Web Fundamentals
 
-## Comprehensive Architect-Level Questions & Answers — SailPoint Pune
+## Architect-Level Questions & Answers
 
 > **Target Role:** Senior/Staff Front End Engineer (7+ years)
 > **Focus:** Advanced JavaScript, TypeScript, Performance, Security, System Design, and Enterprise Patterns

@@ -1,7 +1,6 @@
-# SailPoint — Senior Staff UI Engineer Interview Prep Guide
-## Role: R012532 | Pune, India | Identity Product Engineering
+# Senior Staff UI Engineer — Interview Prep Guide
 
-> Based on: JD analysis + public interview reports (Glassdoor, Indeed, Blind, interviewquery.com) + SailPoint Engineering blog + community data
+> Based on: JD analysis + public interview reports + engineering blog insights + community data
 
 ---
 

@@ -1,9 +1,8 @@
-# SailPoint Frontend Interview Guide - Part 4
-## Generic Front-End Concepts & Browser Fundamentals
+# Browser Internals, Networking & Architecture
+## Framework-Agnostic Front-End Concepts
 
 > **Target Role:** Principal/Staff Front End Engineer
 > **Focus:** Browser APIs, Networking, Performance, Security, Architecture - Framework-Agnostic
-> **Context:** Enterprise-level front-end architecture knowledge for SailPoint IdentityNow/IQ
 
 ---
 

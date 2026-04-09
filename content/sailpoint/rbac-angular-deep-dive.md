@@ -1,5 +1,5 @@
 # Role-Based UI in Angular — Complete Implementation Guide
-## Senior/Staff Interview Answer: Deep Dive with Full Code
+## Deep Dive with Full Code
 
 > **Interview Question:** "How would you implement role-based UI in Angular?"
 >

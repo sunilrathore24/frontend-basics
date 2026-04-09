@@ -1,7 +1,7 @@
-# SailPoint Angular Interview Guide - Part 2
-## Senior/Staff Front End Engineer - Pune
+# Angular RxJS, Routing, Forms & Advanced Patterns
+## Architect-Level Interview Guide
 
-> Covers: RxJS, Performance, Modern Angular, Routing & Forms, Advanced Concepts, Scenarios
+> Covers: RxJS deep dive, Performance, Modern Angular, Routing & Forms, Advanced Concepts, Real-world Scenarios
 
 ---
 

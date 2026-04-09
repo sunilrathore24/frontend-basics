@@ -1,7 +1,7 @@
-# SailPoint Angular Interview Guide - Part 1
-## Senior/Staff Front End Engineer - Pune
+# Angular Core, Change Detection & RxJS
+## Architect-Level Interview Guide
 
-> Comprehensive interview preparation guide with architect-level answers for Angular positions at SailPoint Technologies, Pune.
+> Comprehensive interview preparation covering Angular core architecture, change detection strategies, RxJS mastery, performance optimization, and modern Angular features.
 
 ---
 
