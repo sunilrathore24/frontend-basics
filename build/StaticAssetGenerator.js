@@ -62,7 +62,7 @@ class StaticAssetGenerator {
   <div class="app-container">
     <!-- Tab Navigation -->
     <nav class="tab-navigation">
-      <button class="tab-button active" data-tab="sailpoint">Sailpoint</button>
+      <button class="tab-button active" data-tab="sailpoint">Front End Basics</button>
       <button class="tab-button" data-tab="architect">Architect Level</button>
       <button class="tab-button" data-tab="other">Other Frontend</button>
     </nav>

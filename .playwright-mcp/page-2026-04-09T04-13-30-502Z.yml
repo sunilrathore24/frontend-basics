@@ -1,0 +1,1278 @@
+- generic [ref=e2]:
+  - navigation [ref=e3]:
+    - button "Sailpoint" [ref=e4] [cursor=pointer]
+    - button "Architect Level" [ref=e5] [cursor=pointer]
+    - button "Other Frontend" [ref=e6] [cursor=pointer]
+  - generic [ref=e7]:
+    - button "Toggle sidebar" [expanded] [ref=e8] [cursor=pointer]: ◀
+    - complementary [ref=e9]:
+      - list [ref=e10]:
+        - listitem [ref=e11] [cursor=pointer]: Angular Interview Part1
+        - listitem [ref=e12] [cursor=pointer]: Angular Interview Part2
+        - listitem [ref=e13] [cursor=pointer]: Behavioral Leadership Prep
+        - listitem [ref=e14] [cursor=pointer]: Frontend Interview Part3
+        - listitem [ref=e15] [cursor=pointer]: Frontend Interview Part4
+        - listitem [ref=e16] [cursor=pointer]: Frontend Architect Interview Prep
+        - listitem [ref=e17] [cursor=pointer]: Rbac Angular Deep Dive
+        - listitem [ref=e18] [cursor=pointer]: Senior Staff Prep Guide
+    - main [ref=e19]:
+      - heading "Frontend Architect / UI Lead — Interview Preparation Guide" [level=1] [ref=e478]
+      - blockquote [ref=e479]:
+        - paragraph [ref=e480]:
+          - text: "Roles: Frontend Architect · UI Lead · Senior Staff UI Engineer · Lead UI Engineer · Frontend Expert"
+          - text: "Format: 20 most-asked topics, each with the \"why they ask\", a model answer, and key talking points."
+      - separator [ref=e481]
+      - heading "1. How Would You Design the Architecture for a Large-Scale Frontend Application?" [level=2] [ref=e482]
+      - paragraph [ref=e483]:
+        - strong [ref=e484]: "Why they ask:"
+        - text: "This is the #1 question for architect roles. Interviewers want to see if you think beyond individual components and consider scalability, team collaboration, and long-term maintainability."
+      - paragraph [ref=e485]:
+        - strong [ref=e486]: "Model Answer:"
+      - paragraph [ref=e487]: "I approach large-scale frontend architecture by first understanding the product scope, team size, and deployment model. Then I design in layers:"
+      - paragraph [ref=e488]:
+        - strong [ref=e489]: 1. Project Structure — Feature-based (not type-based)
+      - code [ref=e491]: src/ features/ auth/ components/ hooks/ store/ api/ product/ cart/ shared/ components/ ← reusable design system components hooks/ utils/ app/ ← routing, providers, global config
+      - paragraph [ref=e492]:
+        - text: Feature-based structure ensures each team owns their domain without cross-polluting. Shared code lives in
+        - code [ref=e493]: shared/
+        - text: and is governed by architectural rules (no feature importing from another feature directly).
+      - paragraph [ref=e494]:
+        - strong [ref=e495]: 2. Layered Architecture
+        - text: I separate the codebase into a presentation layer (components/pages), application layer (state management, use cases), and infrastructure layer (API clients, storage adapters). This keeps business logic framework-agnostic and testable.
+      - paragraph [ref=e496]:
+        - strong [ref=e497]: 3. State Management — Separate concerns
+      - list [ref=e498]:
+        - listitem [ref=e499]:
+          - strong [ref=e500]: Server state
+          - text: "(API data): TanStack Query — handles caching, background sync, stale-while-revalidate."
+        - listitem [ref=e501]:
+          - strong [ref=e502]: Global UI state
+          - text: ": Zustand or Redux Toolkit — for auth, theme, notifications."
+        - listitem [ref=e503]:
+          - strong [ref=e504]: Local component state
+          - text: ":"
+          - code [ref=e505]: useState
+          - text: ","
+          - code [ref=e506]: useReducer
+          - text: — keeps components self-contained.
+      - paragraph [ref=e507]:
+        - strong [ref=e508]: 4. Module Boundaries
+        - text: Enforce strict import rules using ESLint plugins like
+        - code [ref=e509]: eslint-plugin-boundaries
+        - text: or Nx workspace boundaries. This prevents spaghetti dependencies.
+      - paragraph [ref=e510]:
+        - strong [ref=e511]: 5. Scalability Levers
+      - list [ref=e512]:
+        - listitem [ref=e513]:
+          - text: Code splitting per route (
+          - code [ref=e514]: React.lazy
+          - text: + Suspense).
+        - listitem [ref=e515]: Monorepo (Nx, Turborepo) for shared tooling, consistent versioning, and atomic commits across packages.
+        - listitem [ref=e516]: A shared Design System as a separate npm package.
+        - listitem [ref=e517]: If teams grow beyond ~8 frontend engineers per vertical, move to Micro-Frontends.
+      - paragraph [ref=e518]:
+        - strong [ref=e519]: "Talking points in the interview:"
+      - list [ref=e520]:
+        - listitem [ref=e521]: "Mention trade-offs: feature-based is harder to set up initially but pays off at scale."
+        - listitem [ref=e522]: Ask the interviewer about team size — your architecture recommendation should change based on org size.
+        - listitem [ref=e523]: Mention the "strangler fig pattern" for migrating legacy monoliths incrementally.
+        - listitem [ref=e524]: The goal is to make the architecture scale with the team, not just the codebase. Optimize for developer velocity, independent deployability, and consistent UX.
+      - separator [ref=e525]
+      - heading "2. Explain Micro-Frontends — When to Use Them and How to Implement" [level=2] [ref=e526]
+      - paragraph [ref=e527]:
+        - strong [ref=e528]: "Why they ask:"
+        - text: Micro-frontends are a senior/architect-level topic that tests both architectural thinking and awareness of organizational trade-offs.
+      - paragraph [ref=e529]:
+        - strong [ref=e530]: "Model Answer:"
+      - paragraph [ref=e531]: Micro-frontends extend the microservices concept to the UI layer. Each team independently develops, deploys, and owns a slice of the frontend application.
+      - paragraph [ref=e532]:
+        - strong [ref=e533]: "When to use:"
+      - list [ref=e534]:
+        - listitem [ref=e535]: Team size > 30 frontend engineers or 3+ teams on the same product.
+        - listitem [ref=e536]: Multiple teams causing release bottlenecks in a monolith.
+        - listitem [ref=e537]: Different parts of the app have very different tech stacks or release cadences.
+        - listitem [ref=e538]: You need independent deployability (e.g., checkout team deploys 5x/day, marketing team deploys weekly).
+        - listitem [ref=e539]: Migrating a legacy app incrementally (strangler fig pattern).
+      - paragraph [ref=e540]:
+        - strong [ref=e541]: "When to avoid:"
+      - list [ref=e542]:
+        - listitem [ref=e543]: Small teams (< 10 developers) — the overhead isn't worth it.
+        - listitem [ref=e544]: Greenfield projects where a well-structured monolith would be simpler.
+        - listitem [ref=e545]: Tightly coupled features that share a lot of state.
+        - listitem [ref=e546]: When you lack platform engineering capacity to maintain the shell/orchestrator.
+      - paragraph [ref=e547]:
+        - strong [ref=e548]: "Implementation approaches:"
+      - table [ref=e549]:
+        - rowgroup [ref=e550]:
+          - row "Approach How it works Best for" [ref=e551]:
+            - columnheader "Approach" [ref=e552]
+            - columnheader "How it works" [ref=e553]
+            - columnheader "Best for" [ref=e554]
+        - rowgroup [ref=e555]:
+          - row "Module Federation (Webpack 5 / Vite) Shell app loads remote JS bundles at runtime Most common, great DX" [ref=e556]:
+            - cell "Module Federation (Webpack 5 / Vite)" [ref=e557]:
+              - strong [ref=e558]: Module Federation (Webpack 5 / Vite)
+            - cell "Shell app loads remote JS bundles at runtime" [ref=e559]
+            - cell "Most common, great DX" [ref=e560]
+          - row "iFrames Complete isolation, simplest Legacy integration, strict security boundaries" [ref=e561]:
+            - cell "iFrames" [ref=e562]:
+              - strong [ref=e563]: iFrames
+            - cell "Complete isolation, simplest" [ref=e564]
+            - cell "Legacy integration, strict security boundaries" [ref=e565]
+          - row "Web Components Custom elements, framework-agnostic Polyglot environments" [ref=e566]:
+            - cell "Web Components" [ref=e567]:
+              - strong [ref=e568]: Web Components
+            - cell "Custom elements, framework-agnostic" [ref=e569]
+            - cell "Polyglot environments" [ref=e570]
+          - row "Single-SPA Orchestration framework, lazy-loads apps Multiple SPA frameworks" [ref=e571]:
+            - cell "Single-SPA" [ref=e572]:
+              - strong [ref=e573]: Single-SPA
+            - cell "Orchestration framework, lazy-loads apps" [ref=e574]
+            - cell "Multiple SPA frameworks" [ref=e575]
+          - row "Server-side composition Assemble HTML fragments at the edge/server Content-heavy, SEO-critical" [ref=e576]:
+            - cell "Server-side composition" [ref=e577]:
+              - strong [ref=e578]: Server-side composition
+            - cell "Assemble HTML fragments at the edge/server" [ref=e579]
+            - cell "Content-heavy, SEO-critical" [ref=e580]
+      - paragraph [ref=e581]:
+        - strong [ref=e582]: "Module Federation example (conceptual):"
+      - code [ref=e584]: "// Host (shell) app — webpack.config.js new ModuleFederationPlugin({ remotes: { cartApp: 'cart@https://cart.myapp.com/remoteEntry.js', }, }) // Usage in host const Cart = React.lazy(() => import('cartApp/CartWidget'));"
+      - paragraph [ref=e585]:
+        - strong [ref=e586]: "Trade-offs to always mention:"
+      - list [ref=e587]:
+        - listitem [ref=e588]:
+          - strong [ref=e589]: "Pros:"
+          - text: Team autonomy, independent deployments, isolated tech decisions.
+        - listitem [ref=e590]:
+          - strong [ref=e591]: "Cons:"
+          - text: Shared state is harder, CSS conflicts, duplicate dependencies (bundle bloat), more DevOps overhead.
+        - listitem [ref=e592]:
+          - strong [ref=e593]: "Mitigations:"
+          - text: Shared design system, thin shell app for routing/auth, strict contracts between micro-apps.
+        - listitem [ref=e594]:
+          - strong [ref=e595]: "Rule:"
+          - text: Don't do it unless your org is genuinely feeling the pain of a monolith.
+      - separator [ref=e596]
+      - 'heading "3. Rendering Strategies: CSR vs SSR vs SSG vs ISR — How Do You Choose?" [level=2] [ref=e597]'
+      - paragraph [ref=e598]:
+        - strong [ref=e599]: "Why they ask:"
+        - text: Architects must select the right rendering strategy for each product type. Getting this wrong has major SEO, performance, and cost implications.
+      - paragraph [ref=e600]:
+        - strong [ref=e601]: "Model Answer:"
+      - table [ref=e602]:
+        - rowgroup [ref=e603]:
+          - row "Strategy How it works Use when" [ref=e604]:
+            - columnheader "Strategy" [ref=e605]
+            - columnheader "How it works" [ref=e606]
+            - columnheader "Use when" [ref=e607]
+        - rowgroup [ref=e608]:
+          - row "CSR (Client-Side Rendering) Browser downloads JS, renders in client Dashboards, admin panels, apps behind auth" [ref=e609]:
+            - cell "CSR (Client-Side Rendering)" [ref=e610]:
+              - strong [ref=e611]: CSR (Client-Side Rendering)
+            - cell "Browser downloads JS, renders in client" [ref=e612]
+            - cell "Dashboards, admin panels, apps behind auth" [ref=e613]
+          - row "SSR (Server-Side Rendering) Server renders HTML per request SEO-critical, real-time data (news feeds, social)" [ref=e614]:
+            - cell "SSR (Server-Side Rendering)" [ref=e615]:
+              - strong [ref=e616]: SSR (Server-Side Rendering)
+            - cell "Server renders HTML per request" [ref=e617]
+            - cell "SEO-critical, real-time data (news feeds, social)" [ref=e618]
+          - row "SSG (Static Site Generation) HTML pre-built at build time Marketing sites, blogs, docs" [ref=e619]:
+            - cell "SSG (Static Site Generation)" [ref=e620]:
+              - strong [ref=e621]: SSG (Static Site Generation)
+            - cell "HTML pre-built at build time" [ref=e622]
+            - cell "Marketing sites, blogs, docs" [ref=e623]
+          - row "ISR (Incremental Static Regeneration) Static pages revalidated on a schedule E-commerce listings, content with periodic updates" [ref=e624]:
+            - cell "ISR (Incremental Static Regeneration)" [ref=e625]:
+              - strong [ref=e626]: ISR (Incremental Static Regeneration)
+            - cell "Static pages revalidated on a schedule" [ref=e627]
+            - cell "E-commerce listings, content with periodic updates" [ref=e628]
+          - row "Islands Architecture Static HTML with selective JS hydration Content-heavy pages with interactive pockets" [ref=e629]:
+            - cell "Islands Architecture" [ref=e630]:
+              - strong [ref=e631]: Islands Architecture
+            - cell "Static HTML with selective JS hydration" [ref=e632]
+            - cell "Content-heavy pages with interactive pockets" [ref=e633]
+      - paragraph [ref=e634]:
+        - strong [ref=e635]: "Decision framework I use:"
+      - list [ref=e636]:
+        - listitem [ref=e637]: Does it need SEO? → Lean toward SSR or SSG.
+        - listitem [ref=e638]: Is the data real-time? → SSR or CSR with WebSockets.
+        - listitem [ref=e639]: Is the data mostly static? → SSG or ISR.
+        - listitem [ref=e640]: Is it behind authentication? → CSR is fine, SEO doesn't matter.
+        - listitem [ref=e641]: Is the content personalized? → SSR with streaming or CSR.
+        - listitem [ref=e642]: Performance on mobile critical? → Islands architecture (minimal JS shipped).
+      - paragraph [ref=e643]:
+        - strong [ref=e644]: "Hybrid approach (advanced answer):"
+        - text: Next.js and Angular Universal (with hydration) let you mix strategies per route. A product listing page uses ISR (revalidates every 60s), a product detail page uses SSR for fresh inventory, and the dashboard uses CSR. This is the most common real-world answer at scale.
+      - paragraph [ref=e645]:
+        - strong [ref=e646]: "Hydration — the key concern:"
+        - text: Partial hydration and resumability (Qwik's approach) are the frontier here, reducing the JS cost of making server-rendered HTML interactive. Full hydration re-executes all component logic on the client — partial hydration only hydrates interactive islands.
+      - separator [ref=e647]
+      - heading "4. How Do You Build and Govern a Design System?" [level=2] [ref=e648]
+      - paragraph [ref=e649]:
+        - strong [ref=e650]: "Why they ask:"
+        - text: Architect roles are often responsible for cross-team UI consistency. Design systems are a major part of that.
+      - paragraph [ref=e651]:
+        - strong [ref=e652]: "Model Answer:"
+      - paragraph [ref=e653]: A design system is not a component library — it's a product. It has governance, versioning, documentation, and adoption strategy.
+      - paragraph [ref=e654]:
+        - strong [ref=e655]: "Layers of a design system:"
+      - list [ref=e656]:
+        - listitem [ref=e657]:
+          - strong [ref=e658]: Design Tokens
+          - text: — primitive values (colors, spacing, typography, shadows) stored as JSON/CSS custom properties. Single source of truth between design and code. Framework-agnostic.
+        - listitem [ref=e659]:
+          - strong [ref=e660]: Core Component Library
+          - text: — headless or styled atoms (Button, Input, Modal) published as an npm package. Component API follows the "pit of success" — sensible defaults, clear prop interfaces, minimal required props.
+        - listitem [ref=e661]:
+          - strong [ref=e662]: Pattern Library
+          - text: — composed patterns (FormField, DataTable, PageHeader).
+        - listitem [ref=e663]:
+          - strong [ref=e664]: Documentation
+          - text: — Storybook with live examples, props tables, accessibility notes, and usage guidelines.
+      - paragraph [ref=e665]:
+        - strong [ref=e666]: "Tech choices:"
+      - list [ref=e667]:
+        - listitem [ref=e668]: Storybook for development and documentation.
+        - listitem [ref=e669]: Rollup or tsup for building the library.
+        - listitem [ref=e670]: Semantic versioning + Changesets for release management.
+        - listitem [ref=e671]: Chromatic for visual regression testing.
+      - paragraph [ref=e672]:
+        - strong [ref=e673]: "Component design patterns:"
+      - list [ref=e674]:
+        - listitem [ref=e675]:
+          - text: Use compound component patterns for complex components (e.g.,
+          - code [ref=e676]: <Tabs>
+          - text: ","
+          - code [ref=e677]: <Tabs.Panel>
+          - text: ","
+          - code [ref=e678]: <Tabs.Trigger>
+          - text: ).
+        - listitem [ref=e679]: Accessibility baked in from day one — ARIA attributes, keyboard navigation, focus management. Not an afterthought.
+        - listitem [ref=e680]: Theming via CSS custom properties or a theme provider pattern.
+      - paragraph [ref=e681]:
+        - strong [ref=e682]: "Governance model:"
+      - list [ref=e683]:
+        - listitem [ref=e684]:
+          - strong [ref=e685]: "Contribution model:"
+          - text: Any team can propose components via RFC (Request for Comment). A small "Design System Council" reviews for consistency.
+        - listitem [ref=e686]:
+          - strong [ref=e687]: "Breaking changes:"
+          - text: Major version bumps with migration guides and codemods.
+        - listitem [ref=e688]:
+          - strong [ref=e689]: "Adoption:"
+          - text: Never force. Show value through better DX — faster development, fewer bugs, accessible by default.
+        - listitem [ref=e690]:
+          - strong [ref=e691]: Usage analytics
+          - text: to understand adoption and identify unused components.
+      - paragraph [ref=e692]:
+        - strong [ref=e693]: "Common pitfall to mention:"
+        - text: Building a design system before understanding shared patterns leads to premature abstraction. I recommend abstracting components only after they've appeared in 3+ different places (the "rule of three").
+      - separator [ref=e694]
+      - heading "5. How Do You Optimize Frontend Performance?" [level=2] [ref=e695]
+      - paragraph [ref=e696]:
+        - strong [ref=e697]: "Why they ask:"
+        - text: Performance is a core responsibility at the architect level — both defining the standards and building the systems to enforce them.
+      - paragraph [ref=e698]:
+        - strong [ref=e699]: "Model Answer:"
+      - paragraph [ref=e700]: "I group performance into three phases:"
+      - paragraph [ref=e701]:
+        - strong [ref=e702]: "Phase 1: Load performance (first visit)"
+      - list [ref=e703]:
+        - listitem [ref=e704]:
+          - text: Code splitting by route (
+          - code [ref=e705]: React.lazy
+          - text: + dynamic
+          - code [ref=e706]: import()
+          - text: ).
+        - listitem [ref=e707]: Tree shaking — ensure only used code is bundled.
+        - listitem [ref=e708]: "Compress assets: Brotli > gzip. Minify JS/CSS."
+        - listitem [ref=e709]:
+          - text: "Image optimization: WebP/AVIF format, correct"
+          - code [ref=e710]: srcset
+          - text: ","
+          - code [ref=e711]: loading="lazy"
+          - text: for below-fold images.
+        - listitem [ref=e712]: Critical CSS inlining — render above-fold styles synchronously.
+        - listitem [ref=e713]:
+          - text: Preload key resources (
+          - code [ref=e714]: <link rel="preload">
+          - text: for fonts, hero images).
+        - listitem [ref=e715]: CDN delivery with long cache TTLs + content-hash filenames.
+        - listitem [ref=e716]: SSR/SSG for faster First Contentful Paint.
+      - paragraph [ref=e717]:
+        - strong [ref=e718]: "Phase 2: Runtime performance (during use)"
+      - list [ref=e719]:
+        - listitem [ref=e720]: Avoid layout thrashing — batch DOM reads and writes.
+        - listitem [ref=e721]:
+          - text: Memoize expensive computations (
+          - code [ref=e722]: useMemo
+          - text: ","
+          - code [ref=e723]: useCallback
+          - text: ).
+        - listitem [ref=e724]:
+          - text: Virtualize long lists (
+          - code [ref=e725]: react-virtual
+          - text: ","
+          - code [ref=e726]: TanStack Virtual
+          - text: ","
+          - code [ref=e727]: cdk-virtual-scroll
+          - text: ).
+        - listitem [ref=e728]: Debounce/throttle high-frequency events (scroll, resize, input).
+        - listitem [ref=e729]:
+          - text: Use
+          - code [ref=e730]: requestAnimationFrame
+          - text: for animations, not
+          - code [ref=e731]: setTimeout
+          - text: .
+        - listitem [ref=e732]: Use Web Workers for CPU-heavy tasks off the main thread.
+        - listitem [ref=e733]:
+          - text: Use
+          - code [ref=e734]: "content-visibility: auto"
+          - text: for off-screen content.
+      - paragraph [ref=e735]:
+        - strong [ref=e736]: "Phase 3: Perceived performance"
+      - list [ref=e737]:
+        - listitem [ref=e738]: Skeleton screens instead of spinners — set user expectations.
+        - listitem [ref=e739]: Optimistic UI updates — show result before server confirms.
+        - listitem [ref=e740]:
+          - text: Prefetch data on hover before navigation (
+          - code [ref=e741]: router.prefetch
+          - text: ).
+      - paragraph [ref=e742]:
+        - strong [ref=e743]: "Target metrics (Core Web Vitals):"
+      - list [ref=e744]:
+        - listitem [ref=e745]: LCP (Largest Contentful Paint) < 2.5s
+        - listitem [ref=e746]: INP (Interaction to Next Paint) < 200ms
+        - listitem [ref=e747]: CLS (Cumulative Layout Shift) < 0.1
+      - paragraph [ref=e748]:
+        - strong [ref=e749]: "Measurement tools I use:"
+      - list [ref=e750]:
+        - listitem [ref=e751]: Lighthouse and Web Vitals in CI (block PRs that degrade Core Web Vitals).
+        - listitem [ref=e752]: Chrome DevTools Performance panel for runtime bottlenecks.
+        - listitem [ref=e753]: Bundle analyzer (webpack-bundle-analyzer) for dependency bloat.
+        - listitem [ref=e754]: Real User Monitoring (RUM) with tools like Datadog or SpeedCurve.
+      - paragraph [ref=e755]: I always profile before optimizing. Data guides where I spend effort, not gut feeling.
+      - separator [ref=e756]
+      - heading "6. How Do You Manage State in a Complex Frontend Application?" [level=2] [ref=e757]
+      - paragraph [ref=e758]:
+        - strong [ref=e759]: "Why they ask:"
+        - text: State management is a common source of bugs and complexity at scale. Architects must define the strategy, not just implement one library.
+      - paragraph [ref=e760]:
+        - strong [ref=e761]: "Model Answer:"
+      - paragraph [ref=e762]:
+        - text: "The most important principle:"
+        - strong [ref=e763]: not all state is the same
+        - text: . Mixing state types into one global store is the root cause of most complexity.
+      - paragraph [ref=e764]:
+        - strong [ref=e765]: "State taxonomy:"
+      - table [ref=e766]:
+        - rowgroup [ref=e767]:
+          - row "Type What it is Tool" [ref=e768]:
+            - columnheader "Type" [ref=e769]
+            - columnheader "What it is" [ref=e770]
+            - columnheader "Tool" [ref=e771]
+        - rowgroup [ref=e772]:
+          - row "Server/Remote State Data from APIs (users, products, orders) TanStack Query, SWR, RTK Query, Apollo Client" [ref=e773]:
+            - cell "Server/Remote State" [ref=e774]:
+              - strong [ref=e775]: Server/Remote State
+            - cell "Data from APIs (users, products, orders)" [ref=e776]
+            - cell "TanStack Query, SWR, RTK Query, Apollo Client" [ref=e777]
+          - row "Global UI State Auth, theme, notifications, modals Zustand, Redux Toolkit, Signals" [ref=e778]:
+            - cell "Global UI State" [ref=e779]:
+              - strong [ref=e780]: Global UI State
+            - cell "Auth, theme, notifications, modals" [ref=e781]
+            - cell "Zustand, Redux Toolkit, Signals" [ref=e782]
+          - row "URL State Filters, pagination, search terms URL params (router)" [ref=e783]:
+            - cell "URL State" [ref=e784]:
+              - strong [ref=e785]: URL State
+            - cell "Filters, pagination, search terms" [ref=e786]
+            - cell "URL params (router)" [ref=e787]
+          - row "Local UI State Open/closed, hover, focused useState, useReducer" [ref=e788]:
+            - cell "Local UI State" [ref=e789]:
+              - strong [ref=e790]: Local UI State
+            - cell "Open/closed, hover, focused" [ref=e791]
+            - cell "useState, useReducer" [ref=e792]:
+              - code [ref=e793]: useState
+              - text: ","
+              - code [ref=e794]: useReducer
+          - row "Form State Input values, validation React Hook Form, Formik" [ref=e795]:
+            - cell "Form State" [ref=e796]:
+              - strong [ref=e797]: Form State
+            - cell "Input values, validation" [ref=e798]
+            - cell "React Hook Form, Formik" [ref=e799]
+      - paragraph [ref=e800]:
+        - strong [ref=e801]: "Architecture rules I enforce:"
+      - list [ref=e802]:
+        - listitem [ref=e803]: Prefer URL state for shareable/bookmarkable state (never put filters in Redux).
+        - listitem [ref=e804]: Use TanStack Query before reaching for Redux — it handles caching, background refresh, loading/error states out of the box.
+        - listitem [ref=e805]: Keep global store lean — only truly global, synchronous UI state belongs there.
+        - listitem [ref=e806]: Co-locate state as close as possible to where it's used.
+        - listitem [ref=e807]: Single source of truth — never duplicate the same data in multiple stores.
+        - listitem [ref=e808]: Immutable updates for predictable change detection.
+      - paragraph [ref=e809]:
+        - strong [ref=e810]: "Advanced talking point — derived state:"
+        - text: Avoid storing derived state. If
+        - code [ref=e811]: fullName
+        - text: can be computed from
+        - code [ref=e812]: firstName + lastName
+        - text: ", don't store"
+        - code [ref=e813]: fullName
+        - text: — compute it with a selector. Storing derived state leads to inconsistency bugs.
+      - paragraph [ref=e814]:
+        - strong [ref=e815]: "Angular-specific note:"
+        - text: I lean on RxJS-based reactive stores (NgRx Signal Store or lightweight service-based stores with BehaviorSubjects) and Signals for synchronous UI state.
+      - separator [ref=e816]
+      - heading "7. How Do You Approach Accessibility (a11y) in Frontend Architecture?" [level=2] [ref=e817]
+      - paragraph [ref=e818]:
+        - strong [ref=e819]: "Why they ask:"
+        - text: Senior roles are expected to champion accessibility, not just implement it. This tests awareness of standards, tooling, and systemic approach.
+      - paragraph [ref=e820]:
+        - strong [ref=e821]: "Model Answer:"
+      - paragraph [ref=e822]: I treat accessibility as a non-functional requirement with the same priority as performance. "We'll add it later" is a lie — retrofitting is 3-5x more expensive than building it in.
+      - paragraph [ref=e823]:
+        - strong [ref=e824]: "Architectural approach:"
+      - list [ref=e825]:
+        - listitem [ref=e826]:
+          - strong [ref=e827]: Design system as the a11y enforcement layer
+          - text: — accessible-by-default components means every team gets it for free. A Button that doesn't handle focus or a Modal that doesn't trap focus should not be in the system.
+        - listitem [ref=e828]:
+          - strong [ref=e829]: Semantic HTML first
+          - text: — use
+          - code [ref=e830]: <button>
+          - text: not
+          - code [ref=e831]: <div onClick>
+          - text: ","
+          - code [ref=e832]: <nav>
+          - text: not
+          - code [ref=e833]: <div class="nav">
+          - text: . Semantics give screen readers context for free.
+        - listitem [ref=e834]:
+          - strong [ref=e835]: ARIA as a last resort
+          - text: "— ARIA supplements HTML, it doesn't replace it. First rule of ARIA: don't use ARIA if a native HTML element does the job. Misused ARIA is worse than no ARIA."
+        - listitem [ref=e836]:
+          - strong [ref=e837]: Keyboard navigation
+          - text: — every interactive element must be reachable and operable via keyboard. Focus management for modals, dialogs, drawers, and route changes is critical.
+        - listitem [ref=e838]:
+          - strong [ref=e839]: Color contrast
+          - text: — WCAG AA requires 4.5:1 for normal text, 3:1 for large text.
+        - listitem [ref=e840]:
+          - strong [ref=e841]: Focus indicators
+          - text: — never remove
+          - code [ref=e842]: :focus
+          - text: outlines without providing a visible alternative.
+      - paragraph [ref=e843]:
+        - strong [ref=e844]: "Testing strategy:"
+      - list [ref=e845]:
+        - listitem [ref=e846]:
+          - strong [ref=e847]: "Automated:"
+          - text: axe-core in unit tests (jest-axe), axe-playwright in E2E. Catches ~30-40% of issues.
+        - listitem [ref=e848]:
+          - strong [ref=e849]: "Manual:"
+          - text: Keyboard-only navigation test, screen reader test (NVDA/JAWS on Windows, VoiceOver on Mac).
+        - listitem [ref=e850]:
+          - strong [ref=e851]: "CI gate:"
+          - text: Fail builds on new axe violations.
+        - listitem [ref=e852]: Include accessibility acceptance criteria in every user story.
+      - paragraph [ref=e853]:
+        - strong [ref=e854]: "Common mistakes I watch for:"
+      - list [ref=e855]:
+        - listitem [ref=e856]:
+          - text: Click handlers on
+          - code [ref=e857]: <div>
+          - text: instead of
+          - code [ref=e858]: <button>
+          - text: .
+        - listitem [ref=e859]:
+          - text: Missing
+          - code [ref=e860]: alt
+          - text: text or decorative images without
+          - code [ref=e861]: alt=""
+          - text: .
+        - listitem [ref=e862]: Modals that don't trap focus.
+        - listitem [ref=e863]:
+          - text: Dynamic content updates not announced to screen readers (use
+          - code [ref=e864]: aria-live
+          - text: regions).
+      - paragraph [ref=e865]:
+        - strong [ref=e866]: "Standards to reference:"
+        - text: WCAG 2.1 AA (and now 2.2). ARIA Authoring Practices Guide (APG) for widget patterns.
+      - separator [ref=e867]
+      - heading "8. How Do You Handle Security in Frontend Applications?" [level=2] [ref=e868]
+      - paragraph [ref=e869]:
+        - strong [ref=e870]: "Why they ask:"
+        - text: Frontend security is often overlooked. Architects should know the threat model and mitigation strategies.
+      - paragraph [ref=e871]:
+        - strong [ref=e872]: "Model Answer:"
+      - paragraph [ref=e873]: "Frontend security focuses on protecting users and data in the browser. Key threat vectors:"
+      - paragraph [ref=e874]:
+        - strong [ref=e875]: XSS (Cross-Site Scripting)
+        - text: — most common frontend vulnerability.
+      - list [ref=e876]:
+        - listitem [ref=e877]:
+          - text: Never use
+          - code [ref=e878]: innerHTML
+          - text: or
+          - code [ref=e879]: dangerouslySetInnerHTML
+          - text: with user-supplied data. Use
+          - code [ref=e880]: textContent
+          - text: .
+        - listitem [ref=e881]:
+          - text: React's JSX escapes by default —
+          - code [ref=e882]: dangerouslySetInnerHTML
+          - text: is a red flag in code reviews.
+        - listitem [ref=e883]: Angular sanitizes by default — bypassing it should require explicit justification.
+        - listitem [ref=e884]: Implement a strict Content Security Policy (CSP) via HTTP headers.
+        - listitem [ref=e885]: Sanitize any HTML you must render (use DOMPurify).
+      - paragraph [ref=e886]:
+        - strong [ref=e887]: CSRF (Cross-Site Request Forgery)
+      - list [ref=e888]:
+        - listitem [ref=e889]:
+          - text: Use
+          - code [ref=e890]: SameSite
+          - text: cookie attribute (
+          - code [ref=e891]: Strict
+          - text: or
+          - code [ref=e892]: Lax
+          - text: ).
+        - listitem [ref=e893]: Include CSRF tokens in state-changing requests.
+        - listitem [ref=e894]:
+          - text: Verify
+          - code [ref=e895]: Origin
+          - text: header on the server.
+      - paragraph [ref=e896]:
+        - strong [ref=e897]: "Token/Auth storage:"
+      - list [ref=e898]:
+        - listitem [ref=e899]:
+          - text: Never store JWTs in
+          - code [ref=e900]: localStorage
+          - text: — vulnerable to XSS. Prefer
+          - code [ref=e901]: HttpOnly
+          - text: cookies (not accessible to JS).
+        - listitem [ref=e902]: If using memory-based token storage (in-app variable), implement silent token refresh.
+      - paragraph [ref=e903]:
+        - strong [ref=e904]: "Dependency security:"
+      - list [ref=e905]:
+        - listitem [ref=e906]:
+          - text: Regular
+          - code [ref=e907]: npm audit
+          - text: in CI.
+        - listitem [ref=e908]: Use Dependabot, Renovate, or Snyk for automated vulnerability PRs.
+        - listitem [ref=e909]: Pin dependency versions and review before upgrading.
+        - listitem [ref=e910]: Minimize dependencies — every package is an attack surface.
+      - paragraph [ref=e911]:
+        - strong [ref=e912]: "Sensitive data in frontend:"
+      - list [ref=e913]:
+        - listitem [ref=e914]: Never hardcode API keys in client-side code — they are visible to users.
+        - listitem [ref=e915]: Use environment variables only for public config (build-time). Secrets go to the backend.
+        - listitem [ref=e916]: Don't log sensitive data to console in production.
+        - listitem [ref=e917]: Mask sensitive fields in error reporting tools.
+      - paragraph [ref=e918]:
+        - strong [ref=e919]: "Third-party scripts:"
+      - list [ref=e920]:
+        - listitem [ref=e921]: Use Subresource Integrity (SRI) for CDN scripts.
+        - listitem [ref=e922]: Audit third-party scripts regularly — they are a common supply chain attack vector.
+        - listitem [ref=e923]: HTTPS everywhere, HSTS headers.
+        - listitem [ref=e924]:
+          - text: Secure iframe embedding with
+          - code [ref=e925]: sandbox
+          - text: attribute and
+          - code [ref=e926]: X-Frame-Options
+          - text: .
+      - separator [ref=e927]
+      - heading "9. How Would You Set Up a CI/CD Pipeline for a Frontend Application?" [level=2] [ref=e928]
+      - paragraph [ref=e929]:
+        - strong [ref=e930]: "Why they ask:"
+        - text: Architects define the engineering infrastructure. A good CI/CD pipeline enforces quality gates, enables fast delivery, and reduces risk.
+      - paragraph [ref=e931]:
+        - strong [ref=e932]: "Model Answer:"
+      - paragraph [ref=e933]:
+        - strong [ref=e934]: "CI Pipeline (on every PR):"
+      - code [ref=e936]: 1. Install → cache node_modules (by lockfile hash) 2. Type check (tsc --noEmit) 3. Lint (ESLint + Prettier check) 4. Unit tests (Jest/Vitest) — with coverage threshold gate 5. Component / Integration tests (Testing Library) 6. Accessibility scan (axe-playwright) 7. Build (production build) 8. Bundle size check (fail if delta > threshold) 9. Lighthouse CI — performance budget checks 10. Visual regression tests (Chromatic for Storybook) 11. Preview deployment (Vercel/Netlify preview URL posted to PR)
+      - paragraph [ref=e937]:
+        - strong [ref=e938]: "CD Pipeline (on merge to main):"
+      - code [ref=e940]: 1. All CI steps pass 2. Build production artifacts 3. Deploy to staging → run full E2E suite (Playwright) 4. Smoke tests on staging 5. Deploy to production (blue/green or canary) 6. Feature flags for gradual feature exposure 7. Synthetic monitoring check post-deploy 8. Automated rollback if error rate spikes
+      - paragraph [ref=e941]:
+        - strong [ref=e942]: "Key principles:"
+      - list [ref=e943]:
+        - listitem [ref=e944]:
+          - strong [ref=e945]: Fail fast
+          - text: — put the fastest checks (lint, type check) first.
+        - listitem [ref=e946]:
+          - strong [ref=e947]: Keep CI under 10 minutes
+          - text: — parallelize, cache aggressively, run only affected tests.
+        - listitem [ref=e948]:
+          - strong [ref=e949]: Preview deployments
+          - text: — every PR gets a live URL. Game changer for design review.
+        - listitem [ref=e950]:
+          - strong [ref=e951]: Feature flags
+          - text: — decouple deployment from release. Deploy dark, enable for % of users.
+        - listitem [ref=e952]:
+          - strong [ref=e953]: Trunk-based development
+          - text: — short-lived branches merged daily, feature flags for incomplete features.
+        - listitem [ref=e954]:
+          - strong [ref=e955]: Semantic versioning
+          - text: automated with conventional commits (semantic-release).
+        - listitem [ref=e956]:
+          - strong [ref=e957]: Artifact immutability
+          - text: — the same build artifact goes from staging to production.
+        - listitem [ref=e958]:
+          - strong [ref=e959]: Environment-specific configs
+          - text: injected at build time, not hardcoded.
+      - separator [ref=e960]
+      - heading "10. How Do You Approach Testing in a Frontend Architecture?" [level=2] [ref=e961]
+      - paragraph [ref=e962]:
+        - strong [ref=e963]: "Why they ask:"
+        - text: Architect-level candidates are expected to define the testing strategy, not just write tests.
+      - paragraph [ref=e964]:
+        - strong [ref=e965]: "Model Answer:"
+      - paragraph [ref=e966]:
+        - text: I follow the
+        - strong [ref=e967]: Testing Trophy
+        - text: "model (Kent C. Dodds), not the traditional test pyramid:"
+      - code [ref=e969]: "[E2E Tests] — few, smoke tests, highest confidence [Integration Tests] — most, test features/user flows ← focus here [Unit Tests] — utilities, pure logic [Static Analysis] — TypeScript, ESLint, always on"
+      - paragraph [ref=e970]: Integration tests give the best ROI — they test how components work together without being as brittle as E2E or as low-value as pure unit tests.
+      - paragraph [ref=e971]:
+        - strong [ref=e972]: "Testing strategy by layer:"
+      - table [ref=e973]:
+        - rowgroup [ref=e974]:
+          - row "Layer Tool What to test" [ref=e975]:
+            - columnheader "Layer" [ref=e976]
+            - columnheader "Tool" [ref=e977]
+            - columnheader "What to test" [ref=e978]
+        - rowgroup [ref=e979]:
+          - row "Static analysis TypeScript + ESLint Type errors, code style" [ref=e980]:
+            - cell "Static analysis" [ref=e981]
+            - cell "TypeScript + ESLint" [ref=e982]
+            - cell "Type errors, code style" [ref=e983]
+          - row "Unit Vitest / Jest Pure functions, utilities, reducers, custom hooks" [ref=e984]:
+            - cell "Unit" [ref=e985]
+            - cell "Vitest / Jest" [ref=e986]
+            - cell "Pure functions, utilities, reducers, custom hooks" [ref=e987]
+          - row "Component / Integration Testing Library User interactions, form flows, API mocking" [ref=e988]:
+            - cell "Component / Integration" [ref=e989]
+            - cell "Testing Library" [ref=e990]
+            - cell "User interactions, form flows, API mocking" [ref=e991]
+          - row "E2E Playwright Critical user journeys (login, checkout, core flows)" [ref=e992]:
+            - cell "E2E" [ref=e993]
+            - cell "Playwright" [ref=e994]
+            - cell "Critical user journeys (login, checkout, core flows)" [ref=e995]
+          - row "Visual regression Chromatic / Percy UI consistency across changes" [ref=e996]:
+            - cell "Visual regression" [ref=e997]
+            - cell "Chromatic / Percy" [ref=e998]
+            - cell "UI consistency across changes" [ref=e999]
+          - row "Accessibility axe-playwright / jest-axe a11y violations on key pages" [ref=e1000]:
+            - cell "Accessibility" [ref=e1001]
+            - cell "axe-playwright / jest-axe" [ref=e1002]
+            - cell "a11y violations on key pages" [ref=e1003]
+          - row "Performance Lighthouse CI Core Web Vitals regression" [ref=e1004]:
+            - cell "Performance" [ref=e1005]
+            - cell "Lighthouse CI" [ref=e1006]
+            - cell "Core Web Vitals regression" [ref=e1007]
+      - paragraph [ref=e1008]:
+        - strong [ref=e1009]: "Key principles:"
+      - list [ref=e1010]:
+        - listitem [ref=e1011]: Test behavior, not implementation. Test what the user sees and does, not internal state.
+        - listitem [ref=e1012]: Tests that break on refactors without functionality changing are a waste of time.
+        - listitem [ref=e1013]:
+          - text: Don't test framework behavior (does Angular's
+          - code [ref=e1014]: "*ngIf"
+          - text: work? Yes, it does).
+        - listitem [ref=e1015]: 100% coverage is a metric, not a goal. Focus on critical paths.
+      - separator [ref=e1016]
+      - heading "11. How Do You Structure and Enforce Code Quality at Scale?" [level=2] [ref=e1017]
+      - paragraph [ref=e1018]:
+        - strong [ref=e1019]: "Why they ask:"
+        - text: Architects are responsible for the technical standards the entire team follows. This tests your ability to lead without just being a gatekeeper.
+      - paragraph [ref=e1020]:
+        - strong [ref=e1021]: "Model Answer:"
+      - paragraph [ref=e1022]: Code quality at scale requires automation — you can't rely on humans to be consistent across 20+ engineers.
+      - paragraph [ref=e1023]:
+        - strong [ref=e1024]: "My quality stack:"
+      - list [ref=e1025]:
+        - listitem [ref=e1026]:
+          - strong [ref=e1027]: TypeScript
+          - text: (strict mode) — type safety eliminates entire classes of bugs.
+        - listitem [ref=e1028]:
+          - strong [ref=e1029]: ESLint
+          - text: — enforce architectural rules (no
+          - code [ref=e1030]: any
+          - text: ", no direct cross-feature imports, import order)."
+        - listitem [ref=e1031]:
+          - strong [ref=e1032]: Prettier
+          - text: — formatting should never be a discussion in code review.
+        - listitem [ref=e1033]:
+          - strong [ref=e1034]: Husky + lint-staged
+          - text: — run linting on staged files pre-commit, fail fast locally.
+        - listitem [ref=e1035]:
+          - strong [ref=e1036]: Conventional Commits
+          - text: — standardized commit messages enable automated changelogs and semantic versioning.
+      - paragraph [ref=e1037]:
+        - strong [ref=e1038]: "Code review culture:"
+      - list [ref=e1039]:
+        - listitem [ref=e1040]: PRs should be small (< 400 lines changed). Big PRs get rubber-stamped or cause analysis paralysis.
+        - listitem [ref=e1041]: Agree on what code review is for (correctness, architecture, security) vs. not for (style — that's Prettier's job).
+        - listitem [ref=e1042]: I document architectural decisions as ADRs (Architecture Decision Records) so context is never lost.
+      - paragraph [ref=e1043]:
+        - strong [ref=e1044]: "Enforcing architecture rules with code:"
+      - list [ref=e1045]:
+        - listitem [ref=e1046]:
+          - text: Use
+          - code [ref=e1047]: eslint-plugin-boundaries
+          - text: to enforce module boundaries between features.
+        - listitem [ref=e1048]:
+          - text: Use
+          - code [ref=e1049]: dependency-cruiser
+          - text: to visualize and gate dependency graphs.
+        - listitem [ref=e1050]: Add architecture rules to CI — fail the build if boundaries are violated.
+      - separator [ref=e1051]
+      - heading "12. What Patterns Do You Use for Component Design?" [level=2] [ref=e1052]
+      - paragraph [ref=e1053]:
+        - strong [ref=e1054]: "Why they ask:"
+        - text: Architect-level candidates should know advanced patterns beyond basic components and understand when each applies.
+      - paragraph [ref=e1055]:
+        - strong [ref=e1056]: "Model Answer:"
+      - paragraph [ref=e1057]:
+        - strong [ref=e1058]: 1. Compound Components
+        - text: Groups of components that share implicit state through Context. Great for flexible, composable APIs (like
+        - code [ref=e1059]: <Select>
+        - text: ","
+        - code [ref=e1060]: <Tabs>
+        - text: ","
+        - code [ref=e1061]: <Accordion>
+        - text: ).
+      - code [ref=e1063]: <Tabs> <Tabs.List> <Tabs.Tab id="profile">Profile</Tabs.Tab> <Tabs.Tab id="settings">Settings</Tabs.Tab> </Tabs.List> <Tabs.Panel id="profile">...</Tabs.Panel> </Tabs>
+      - paragraph [ref=e1064]:
+        - strong [ref=e1065]: 2. Headless Components (most important pattern today)
+        - text: Separate logic/state from rendering. Libraries like Radix UI, Headless UI, and React Aria follow this. You get the behavior (keyboard nav, ARIA, focus management) and provide your own styles.
+      - code [ref=e1067]: // Radix headless dialog — all behavior is managed for you <Dialog.Root> <Dialog.Trigger>Open</Dialog.Trigger> <Dialog.Content>...</Dialog.Content> </Dialog.Root>
+      - paragraph [ref=e1068]:
+        - strong [ref=e1069]: 3. Container/Presenter (Smart/Dumb)
+        - text: Separate data-fetching (container) from rendering (presenter). Improves testability — presenters are pure UI, easy to test in Storybook and unit tests.
+      - paragraph [ref=e1070]:
+        - strong [ref=e1071]: 4. Render Props / Children as Function
+        - text: Inversion of control — the parent component controls rendering logic while the child controls data.
+      - paragraph [ref=e1072]:
+        - strong [ref=e1073]: 5. Custom Hooks as the primary abstraction unit
+        - text: Any reusable stateful logic goes into a hook. This is the modern replacement for HOCs.
+      - paragraph [ref=e1074]:
+        - strong [ref=e1075]: "Anti-patterns to mention avoiding:"
+      - list [ref=e1076]:
+        - listitem [ref=e1077]: Prop drilling beyond 2 levels → use Context or state management.
+        - listitem [ref=e1078]: God components (one component doing everything) → split by responsibility.
+        - listitem [ref=e1079]: Over-abstraction too early → YAGNI (You Aren't Gonna Need It).
+      - separator [ref=e1080]
+      - heading "13. How Do You Handle Internationalization (i18n) and Localization (l10n)?" [level=2] [ref=e1081]
+      - paragraph [ref=e1082]:
+        - strong [ref=e1083]: "Why they ask:"
+        - text: For companies with global products, i18n is an architectural concern, not a feature. Getting this wrong is expensive to fix.
+      - paragraph [ref=e1084]:
+        - strong [ref=e1085]: "Model Answer:"
+      - paragraph [ref=e1086]: i18n needs to be baked into the architecture from the start. Retrofitting it is painful.
+      - paragraph [ref=e1087]:
+        - strong [ref=e1088]: "Library choice:"
+        - code [ref=e1089]: react-i18next
+        - text: or
+        - code [ref=e1090]: FormatJS (react-intl)
+        - text: for React.
+        - code [ref=e1091]: ngx-translate
+        - text: or Angular's built-in i18n for Angular.
+        - code [ref=e1092]: vue-i18n
+        - text: for Vue.
+      - paragraph [ref=e1093]:
+        - strong [ref=e1094]: "Key architectural decisions:"
+      - paragraph [ref=e1095]:
+        - strong [ref=e1096]: "1. Translation file structure:"
+      - code [ref=e1098]: locales/ en/ common.json ← shared strings (Save, Cancel, Error) auth.json ← feature-specific product.json fr/ common.json
+      - paragraph [ref=e1099]: Namespaced files prevent one giant file that causes merge conflicts.
+      - paragraph [ref=e1100]:
+        - strong [ref=e1101]: 2. Build-time vs runtime i18n
+        - text: — build-time (Angular i18n) produces optimized bundles per locale but requires separate builds. Runtime (ngx-translate, react-intl) is more flexible but adds bundle size. Lazy load translations — only load the active locale's strings.
+      - paragraph [ref=e1102]:
+        - strong [ref=e1103]: "3. ICU message format for plurals and complex messages:"
+      - code [ref=e1105]: "{count, plural, =0 {No items} one {1 item} other {{count} items}}"
+      - paragraph [ref=e1106]:
+        - text: Never do
+        - code [ref=e1107]: "count > 1 ? 'items' : 'item'"
+        - text: . This breaks for languages with complex plural rules (Russian has 3 plural forms, Arabic has 6).
+      - paragraph [ref=e1108]:
+        - strong [ref=e1109]: 4. Date, numbers, currencies
+        - text: — never format manually. Use
+        - code [ref=e1110]: Intl.DateTimeFormat
+        - text: ","
+        - code [ref=e1111]: Intl.NumberFormat
+        - text: ", or FormatJS which wraps the Intl API."
+      - paragraph [ref=e1112]:
+        - strong [ref=e1113]: 5. RTL (Right-to-Left) support
+        - text: — CSS Logical Properties (
+        - code [ref=e1114]: margin-inline-start
+        - text: instead of
+        - code [ref=e1115]: margin-left
+        - text: ) make RTL trivial. Set
+        - code [ref=e1116]: dir="rtl"
+        - text: "on"
+        - code [ref=e1117]: <html>
+        - text: based on locale.
+      - paragraph [ref=e1118]:
+        - strong [ref=e1119]: 6. Text expansion
+        - text: — German text is ~30% longer than English. Design UI that accommodates this.
+      - paragraph [ref=e1120]:
+        - strong [ref=e1121]: 7. Pseudolocalization
+        - text: — a testing technique where you replace all strings with extended fake translations (e.g.,
+        - code [ref=e1122]: "[Ünïcödé Strïng Hëré!!!!]"
+        - text: ). Catches layout-breaking translations and hardcoded strings before real translations arrive.
+      - paragraph [ref=e1123]:
+        - strong [ref=e1124]: 8. Translation workflow
+        - text: — connect to a TMS (Translation Management System) like Phrase, Crowdin, or Lokalise. Automated extraction of new keys, professional translation, and CI sync. Never ask developers to manually manage translation files.
+      - separator [ref=e1125]
+      - heading "14. How Do You Manage Technical Debt and Architectural Evolution?" [level=2] [ref=e1126]
+      - paragraph [ref=e1127]:
+        - strong [ref=e1128]: "Why they ask:"
+        - text: Architect roles exist long-term. They need someone who can keep a codebase healthy over years, not just build the initial architecture.
+      - paragraph [ref=e1129]:
+        - strong [ref=e1130]: "Model Answer:"
+      - paragraph [ref=e1131]:
+        - text: Technical debt is not inherently bad — sometimes it's a deliberate trade-off to ship faster. The problem is
+        - strong [ref=e1132]: untracked, unmanaged debt
+        - text: .
+      - paragraph [ref=e1133]:
+        - strong [ref=e1134]: "My framework:"
+      - paragraph [ref=e1135]:
+        - strong [ref=e1136]: 1. Make debt visible
+      - list [ref=e1137]:
+        - listitem [ref=e1138]:
+          - text: Add
+          - code [ref=e1139]: "// TODO(debt):"
+          - text: comments with a ticket link.
+        - listitem [ref=e1140]: Maintain a "tech debt backlog" as first-class tickets, not hidden in Jira comments.
+        - listitem [ref=e1141]: "Track a \"debt ratio\" metric: debt tickets / total tickets. Present it to leadership quarterly."
+      - paragraph [ref=e1142]:
+        - strong [ref=e1143]: 2. Categorize debt
+      - list [ref=e1144]:
+        - listitem [ref=e1145]:
+          - strong [ref=e1146]: Reckless
+          - text: (we knew better) — fix ASAP.
+        - listitem [ref=e1147]:
+          - strong [ref=e1148]: Prudent
+          - text: (deliberate trade-off) — schedule repayment with next feature touch.
+        - listitem [ref=e1149]:
+          - strong [ref=e1150]: Accidental
+          - text: (grew organically) — refactor incrementally.
+      - paragraph [ref=e1151]:
+        - strong [ref=e1152]: 3. Incremental migration — the Boy Scout Rule
+        - text: "\"Leave the code better than you found it.\" Every PR that touches a legacy module should include small improvements. This avoids big-bang rewrites."
+      - paragraph [ref=e1153]:
+        - strong [ref=e1154]: 4. Strangler Fig Pattern for major migrations
+        - text: Instead of rewriting, build the new system alongside the old. Gradually route traffic to the new system, strangle the old. Works for migrating from Angular to React, from REST to GraphQL, from class components to hooks.
+      - paragraph [ref=e1155]:
+        - strong [ref=e1156]: 5. ADRs (Architecture Decision Records)
+        - text: Every significant decision documented in
+        - code [ref=e1157]: /docs/adr/
+        - text: . Records the context, decision, and consequences. Prevents "why did we do this?" debates 2 years later.
+      - paragraph [ref=e1158]:
+        - strong [ref=e1159]: "6. Measure health with metrics:"
+      - list [ref=e1160]:
+        - listitem [ref=e1161]:
+          - text: Cyclomatic complexity (eslint
+          - code [ref=e1162]: complexity
+          - text: rule)
+        - listitem [ref=e1163]: Code duplication (jscpd)
+        - listitem [ref=e1164]: Bundle size trends
+        - listitem [ref=e1165]: Build time trends
+      - separator [ref=e1166]
+      - heading "15. How Do You Think About Frontend Observability and Monitoring?" [level=2] [ref=e1167]
+      - paragraph [ref=e1168]:
+        - strong [ref=e1169]: "Why they ask:"
+        - text: Senior/architect candidates are expected to own production quality, not just development quality. Observability is often ignored in frontend.
+      - paragraph [ref=e1170]:
+        - strong [ref=e1171]: "Model Answer:"
+      - paragraph [ref=e1172]: Frontend observability is about knowing what's happening in your app for real users, not just in your test environment.
+      - paragraph [ref=e1173]:
+        - strong [ref=e1174]: "Three pillars of frontend observability:"
+      - paragraph [ref=e1175]:
+        - strong [ref=e1176]: 1. Error Monitoring
+      - list [ref=e1177]:
+        - listitem [ref=e1178]: "Tool: Sentry or Datadog RUM."
+        - listitem [ref=e1179]: Capture unhandled exceptions, promise rejections, and API errors.
+        - listitem [ref=e1180]: Group by fingerprint to avoid noise.
+        - listitem [ref=e1181]: Set up source maps so stack traces point to original source, not minified bundles.
+        - listitem [ref=e1182]: Alert on error rate spikes, not just raw error count.
+      - paragraph [ref=e1183]:
+        - strong [ref=e1184]: 2. Performance Monitoring (Real User Monitoring — RUM)
+      - list [ref=e1185]:
+        - listitem [ref=e1186]: Capture Core Web Vitals (LCP, INP, CLS) from real users, by device, by geography.
+        - listitem [ref=e1187]: "Synthetic monitoring: scheduled Lighthouse runs from CI to detect regressions."
+        - listitem [ref=e1188]: "Tools: SpeedCurve, Datadog RUM, Google CrUX (free)."
+      - paragraph [ref=e1189]:
+        - strong [ref=e1190]: 3. User Analytics & Session Replay
+      - list [ref=e1191]:
+        - listitem [ref=e1192]: "Tools: PostHog, FullStory, LogRocket."
+        - listitem [ref=e1193]: "Session replay: record user sessions to diagnose bugs and UX issues."
+        - listitem [ref=e1194]: Custom events for critical flows (funnel drop-offs, form abandonment).
+      - paragraph [ref=e1195]:
+        - strong [ref=e1196]: "Alerting strategy:"
+      - list [ref=e1197]:
+        - listitem [ref=e1198]: Apdex score drop → page on-call.
+        - listitem [ref=e1199]: Error rate > baseline + 2σ → Slack alert.
+        - listitem [ref=e1200]: Core Web Vitals regression detected in RUM → engineering ticket auto-created.
+      - paragraph [ref=e1201]:
+        - strong [ref=e1202]: "Advanced: Custom Performance Marks"
+      - code [ref=e1204]: performance.mark('checkout-started'); // ... checkout logic performance.mark('checkout-completed'); performance.measure('checkout-duration', 'checkout-started', 'checkout-completed');
+      - paragraph [ref=e1205]: Send these to your analytics platform for custom flow performance tracking.
+      - separator [ref=e1206]
+      - heading "16. How Do You Approach API Design and Integration from the Frontend?" [level=2] [ref=e1207]
+      - paragraph [ref=e1208]:
+        - strong [ref=e1209]: "Why they ask:"
+        - text: Architects regularly define contracts between frontend and backend. Understanding BFF, GraphQL, REST trade-offs is essential.
+      - paragraph [ref=e1210]:
+        - strong [ref=e1211]: "Model Answer:"
+      - paragraph [ref=e1212]:
+        - text: "The key insight:"
+        - strong [ref=e1213]: the frontend's ideal data shape rarely matches what the backend provides
+        - text: . Closing that gap is an architectural decision.
+      - paragraph [ref=e1214]:
+        - strong [ref=e1215]: "Approaches:"
+      - paragraph [ref=e1216]:
+        - strong [ref=e1217]: 1. BFF (Backend for Frontend)
+        - text: A dedicated API layer owned by the frontend team. It aggregates multiple microservices, transforms data shapes, and serves exactly what the UI needs. Reduces over-fetching and simplifies client code. Common in large orgs (Netflix, Spotify).
+      - paragraph [ref=e1218]:
+        - strong [ref=e1219]: 2. REST
+        - text: "Simple, cacheable, well-understood. Best for CRUD operations with predictable data shapes. Main frontend pain point: over-fetching (getting too many fields) and under-fetching (needing multiple requests for related data)."
+      - paragraph [ref=e1220]:
+        - strong [ref=e1221]: 3. GraphQL
+        - text: "Client specifies exact data shape — no over/under-fetching. Excellent for complex, interconnected data. Trade-offs: caching is harder (POST requests), learning curve, potential for N+1 problems on the server. Use Apollo Client or urql on the frontend."
+      - paragraph [ref=e1222]:
+        - strong [ref=e1223]: 4. tRPC
+        - text: Type-safe RPC between TypeScript frontend and backend. Zero runtime overhead for API types — types are shared directly. Game-changer for full-stack TypeScript teams.
+      - paragraph [ref=e1224]:
+        - strong [ref=e1225]: "Frontend integration architecture:"
+      - code [ref=e1227]: Components → Services/Hooks → API Client → HTTP Layer (fetch/axios)
+      - paragraph [ref=e1228]:
+        - text: Components should never call
+        - code [ref=e1229]: fetch
+        - text: directly.
+      - paragraph [ref=e1230]:
+        - strong [ref=e1231]: "API client layer responsibilities:"
+      - list [ref=e1232]:
+        - listitem [ref=e1233]: Base URL configuration per environment.
+        - listitem [ref=e1234]: Request/response interceptors (auth tokens, error handling, logging).
+        - listitem [ref=e1235]: Request deduplication — don't fire the same GET twice simultaneously.
+        - listitem [ref=e1236]: Retry logic with exponential backoff for transient failures.
+        - listitem [ref=e1237]: Request cancellation (AbortController) on component unmount or navigation.
+        - listitem [ref=e1238]: Response transformation — map API shapes to frontend models.
+      - paragraph [ref=e1239]:
+        - strong [ref=e1240]: "Caching strategy:"
+      - list [ref=e1241]:
+        - listitem [ref=e1242]: Stale-while-revalidate — show cached data immediately, refresh in background.
+        - listitem [ref=e1243]: Cache invalidation on mutations — when you POST/PUT/DELETE, invalidate related queries.
+        - listitem [ref=e1244]: Offline support — cache critical data in IndexedDB, sync when back online.
+      - paragraph [ref=e1245]:
+        - strong [ref=e1246]: "Contract management:"
+      - list [ref=e1247]:
+        - listitem [ref=e1248]: OpenAPI/Swagger specs to auto-generate TypeScript types and API clients.
+        - listitem [ref=e1249]: Contract testing to catch breaking API changes early.
+      - separator [ref=e1250]
+      - heading "17. How Do You Approach Frontend Security for Auth Flows?" [level=2] [ref=e1251]
+      - paragraph [ref=e1252]:
+        - strong [ref=e1253]: "Why they ask:"
+        - text: Auth is a common area where frontend architects make critical security decisions about token storage, OAuth flows, and session management.
+      - paragraph [ref=e1254]:
+        - strong [ref=e1255]: "Model Answer:"
+      - paragraph [ref=e1256]:
+        - strong [ref=e1257]: "Token storage — the most debated topic:"
+      - table [ref=e1258]:
+        - rowgroup [ref=e1259]:
+          - row "Storage XSS Risk CSRF Risk Recommendation" [ref=e1260]:
+            - columnheader "Storage" [ref=e1261]
+            - columnheader "XSS Risk" [ref=e1262]
+            - columnheader "CSRF Risk" [ref=e1263]
+            - columnheader "Recommendation" [ref=e1264]
+        - rowgroup [ref=e1265]:
+          - row "localStorage HIGH (JS-accessible) None ❌ Avoid for sensitive tokens" [ref=e1266]:
+            - cell "localStorage" [ref=e1267]:
+              - code [ref=e1268]: localStorage
+            - cell "HIGH (JS-accessible)" [ref=e1269]
+            - cell "None" [ref=e1270]
+            - cell "❌ Avoid for sensitive tokens" [ref=e1271]
+          - row "sessionStorage HIGH (JS-accessible) None ❌ Avoid" [ref=e1272]:
+            - cell "sessionStorage" [ref=e1273]:
+              - code [ref=e1274]: sessionStorage
+            - cell "HIGH (JS-accessible)" [ref=e1275]
+            - cell "None" [ref=e1276]
+            - cell "❌ Avoid" [ref=e1277]
+          - row "HttpOnly Cookie None (JS can't read) Medium ✅ Preferred for JWTs" [ref=e1278]:
+            - cell "HttpOnly Cookie" [ref=e1279]:
+              - code [ref=e1280]: HttpOnly Cookie
+            - cell "None (JS can't read)" [ref=e1281]
+            - cell "Medium" [ref=e1282]
+            - cell "✅ Preferred for JWTs" [ref=e1283]
+          - row "Memory (variable) LOW None ✅ Acceptable, but lost on refresh" [ref=e1284]:
+            - cell "Memory (variable)" [ref=e1285]
+            - cell "LOW" [ref=e1286]
+            - cell "None" [ref=e1287]
+            - cell "✅ Acceptable, but lost on refresh" [ref=e1288]
+      - paragraph [ref=e1289]:
+        - strong [ref=e1290]: "Recommended auth architecture:"
+      - list [ref=e1291]:
+        - listitem [ref=e1292]:
+          - text: Backend issues JWT in
+          - code [ref=e1293]: HttpOnly
+          - text: +
+          - code [ref=e1294]: Secure
+          - text: +
+          - code [ref=e1295]: SameSite=Strict
+          - text: cookie.
+        - listitem [ref=e1296]: Frontend never touches the token directly.
+        - listitem [ref=e1297]: Use a short-lived access token (15 min) + long-lived refresh token (7 days, HttpOnly cookie).
+        - listitem [ref=e1298]: Implement silent refresh using a background fetch before access token expires.
+      - paragraph [ref=e1299]:
+        - strong [ref=e1300]: "Architecture pattern:"
+      - code [ref=e1302]: AuthService → manages tokens, login/logout, refresh AuthGuard → protects routes AuthInterceptor → attaches tokens to API requests, handles 401s PermissionDirective → *hasPermission="'admin'" to show/hide UI
+      - paragraph [ref=e1303]:
+        - strong [ref=e1304]: "OAuth 2.0 with PKCE (for SPAs):"
+        - text: For third-party OAuth (Google, GitHub), always use the Authorization Code flow with PKCE — never the implicit flow (deprecated for SPAs). PKCE adds a code verifier/challenge to prevent authorization code interception.
+      - paragraph [ref=e1305]:
+        - strong [ref=e1306]: "Session management:"
+      - list [ref=e1307]:
+        - listitem [ref=e1308]: "Implement proper logout: revoke refresh token on server, clear cookies, clear in-memory state."
+        - listitem [ref=e1309]: Track active sessions (show user their active devices).
+        - listitem [ref=e1310]: Implement idle timeout for sensitive applications.
+      - paragraph [ref=e1311]:
+        - strong [ref=e1312]: "Key principle:"
+        - text: The server is the source of truth for authorization. Front-end authorization is for UX, not security. Always validate on the server — never trust the client.
+      - separator [ref=e1313]
+      - heading "18. How Do You Lead and Mentor a Frontend Team as an Architect?" [level=2] [ref=e1314]
+      - paragraph [ref=e1315]:
+        - strong [ref=e1316]: "Why they ask:"
+        - text: Architect roles are not just technical. They require leadership, influence without authority, and the ability to raise team capability.
+      - paragraph [ref=e1317]:
+        - strong [ref=e1318]: "Model Answer:"
+      - paragraph [ref=e1319]: Being a frontend architect means you multiply the team's output, not just your own. The best architects write less code and enable more.
+      - paragraph [ref=e1320]:
+        - strong [ref=e1321]: 1. Technical Vision & Roadmap
+      - list [ref=e1322]:
+        - listitem [ref=e1323]: Define the 6-month and 12-month technical roadmap aligned with business goals.
+        - listitem [ref=e1324]: "Communicate it in language non-engineers understand: \"this reduces our new feature time from 3 weeks to 1 week.\""
+        - listitem [ref=e1325]: Get buy-in through demos and data, not mandates.
+      - paragraph [ref=e1326]:
+        - strong [ref=e1327]: 2. ADRs and RFCs as decision tools
+      - list [ref=e1328]:
+        - listitem [ref=e1329]: Major decisions go through an RFC (Request for Comment) process — written proposal, async feedback period, then decision.
+        - listitem [ref=e1330]: This scales better than meetings and creates a paper trail.
+      - paragraph [ref=e1331]:
+        - strong [ref=e1332]: "3. Mentoring approach:"
+      - list [ref=e1333]:
+        - listitem [ref=e1334]: Code review as a teaching tool — explain the why, not just what to change.
+        - listitem [ref=e1335]: Pair programming for complex architectural tasks with senior engineers.
+        - listitem [ref=e1336]: Tech talks and internal workshops — share knowledge across the team.
+        - listitem [ref=e1337]: Identify each engineer's growth area and create opportunities (assign them as the "owner" of a meaningful initiative).
+      - paragraph [ref=e1338]:
+        - strong [ref=e1339]: "4. Balancing autonomy and standards:"
+      - list [ref=e1340]:
+        - listitem [ref=e1341]: Set guardrails, not cage bars. Define what must be consistent (design system, testing approach, folder structure) and give teams freedom on everything else.
+        - listitem [ref=e1342]: "\"Paved roads\": make the right thing the easy thing. If the right pattern is also the most convenient, teams follow it naturally."
+        - listitem [ref=e1343]: Build golden paths — starter templates, generators, and examples.
+      - paragraph [ref=e1344]:
+        - strong [ref=e1345]: "5. Scaling knowledge:"
+      - list [ref=e1346]:
+        - listitem [ref=e1347]: Inner source model — teams contribute to shared libraries through PRs, not requests.
+        - listitem [ref=e1348]: Guilds or chapters for cross-team knowledge sharing (performance guild, accessibility guild).
+        - listitem [ref=e1349]: Document tribal knowledge — runbooks, architecture diagrams, onboarding guides.
+      - paragraph [ref=e1350]:
+        - strong [ref=e1351]: "6. Stakeholder communication:"
+      - list [ref=e1352]:
+        - listitem [ref=e1353]: Translate technical debt into business impact — "this refactor will reduce our deployment time from 45 minutes to 5 minutes."
+        - listitem [ref=e1354]: Build a tech radar — classify technologies as Adopt, Trial, Assess, Hold.
+      - paragraph [ref=e1355]:
+        - strong [ref=e1356]: "7. Metrics I track for team health:"
+      - list [ref=e1357]:
+        - listitem [ref=e1358]: "DORA metrics: deployment frequency, lead time, change failure rate, MTTR."
+        - listitem [ref=e1359]: Developer satisfaction (quarterly surveys).
+        - listitem [ref=e1360]: Onboarding time for new engineers.
+      - paragraph [ref=e1361]:
+        - strong [ref=e1362]: "What makes a great frontend architect:"
+      - list [ref=e1363]:
+        - listitem [ref=e1364]: You write code. Architects who don't code lose credibility and context.
+        - listitem [ref=e1365]: You make other developers more productive, not more dependent on you.
+        - listitem [ref=e1366]: You optimize for the team's long-term velocity, not short-term heroics.
+      - separator [ref=e1367]
+      - heading "19. How Do You Handle Browser Compatibility and Cross-Platform Challenges?" [level=2] [ref=e1368]
+      - paragraph [ref=e1369]:
+        - strong [ref=e1370]: "Why they ask:"
+        - text: Tests understanding of progressive enhancement, polyfilling strategy, and pragmatic decision-making vs. chasing perfection.
+      - paragraph [ref=e1371]:
+        - strong [ref=e1372]: "Model Answer:"
+      - paragraph [ref=e1373]:
+        - strong [ref=e1374]: "My approach: Progressive Enhancement, not Graceful Degradation."
+        - text: Build a solid baseline that works everywhere, then layer enhancements for capable browsers. Users on old browsers get a functional experience; users on modern browsers get a great one.
+      - paragraph [ref=e1375]:
+        - strong [ref=e1376]: "Browser support strategy:"
+      - list [ref=e1377]:
+        - listitem [ref=e1378]: Define a browser support matrix based on analytics data, not assumptions. If only 0.3% of your users are on IE11, don't build for it.
+        - listitem [ref=e1379]:
+          - text: Use
+          - link "browserslist" [ref=e1380] [cursor=pointer]:
+            - /url: https://browsersl.ist/
+          - text: in
+          - code [ref=e1381]: .browserslistrc
+          - text: — drives both Babel transpilation and Autoprefixer.
+        - listitem [ref=e1382]:
+          - text: Use
+          - code [ref=e1383]: "@supports"
+          - text: in CSS for feature detection instead of browser sniffing.
+      - paragraph [ref=e1384]:
+        - strong [ref=e1385]: "JavaScript compatibility:"
+      - list [ref=e1386]:
+        - listitem [ref=e1387]: Babel transpiles modern syntax to target browsers.
+        - listitem [ref=e1388]:
+          - text: CoreJS for polyfilling runtime APIs (
+          - code [ref=e1389]: Array.prototype.at
+          - text: ","
+          - code [ref=e1390]: Promise.allSettled
+          - text: ).
+        - listitem [ref=e1391]: "Consider the cost: heavy polyfilling = bigger bundles for all users. Consider differential serving (ES modules for modern, legacy bundle for old)."
+      - paragraph [ref=e1392]:
+        - strong [ref=e1393]: "CSS compatibility:"
+      - list [ref=e1394]:
+        - listitem [ref=e1395]: PostCSS + Autoprefixer handles vendor prefixes automatically.
+        - listitem [ref=e1396]: CSS custom properties (variables) — wide support now, no polyfill needed.
+        - listitem [ref=e1397]:
+          - text: Container queries — check caniuse.com; use
+          - code [ref=e1398]: "@supports"
+          - text: if needed.
+        - listitem [ref=e1399]: CSS Logical Properties for RTL support.
+      - paragraph [ref=e1400]:
+        - strong [ref=e1401]: "Testing cross-browser:"
+      - list [ref=e1402]:
+        - listitem [ref=e1403]: BrowserStack or Sauce Labs for cross-browser automated testing.
+        - listitem [ref=e1404]: Test on real mobile devices (Safari on iOS is the new IE — WebKit updates are slow on iOS).
+        - listitem [ref=e1405]: Playwright supports Chromium, Firefox, and WebKit — use all three in CI.
+      - paragraph [ref=e1406]:
+        - strong [ref=e1407]: "Mobile-specific concerns:"
+      - list [ref=e1408]:
+        - listitem [ref=e1409]:
+          - text: "300ms tap delay on older iOS (fix:"
+          - code [ref=e1410]: "touch-action: manipulation"
+          - text: ).
+        - listitem [ref=e1411]:
+          - text: Viewport height on mobile (
+          - code [ref=e1412]: 100vh
+          - text: doesn't account for browser chrome — use
+          - code [ref=e1413]: dvh
+          - text: /
+          - code [ref=e1414]: svh
+          - text: CSS units).
+        - listitem [ref=e1415]:
+          - text: "Input zoom on iOS Safari (fix:"
+          - code [ref=e1416]: "font-size: 16px"
+          - text: minimum on inputs).
+      - separator [ref=e1417]
+      - heading "20. How Do You Make Architectural Decisions and Manage Trade-offs?" [level=2] [ref=e1418]
+      - paragraph [ref=e1419]:
+        - strong [ref=e1420]: "Why they ask:"
+        - text: This is a leadership and maturity question. How you make decisions under uncertainty is as important as what you decide.
+      - paragraph [ref=e1421]:
+        - strong [ref=e1422]: "Model Answer:"
+      - paragraph [ref=e1423]: Architecture is about managing trade-offs, not finding perfect solutions. Every decision sacrifices something.
+      - paragraph [ref=e1424]:
+        - strong [ref=e1425]: "My decision-making framework:"
+      - paragraph [ref=e1426]:
+        - strong [ref=e1427]: 1. Define the constraints first
+        - text: "Before evaluating options, enumerate: team size, team skill set, existing tech stack, budget, timeline, scalability requirements, compliance needs. The \"right\" architecture changes dramatically based on these."
+      - paragraph [ref=e1428]:
+        - strong [ref=e1429]: 2. Use a Trade-off matrix
+        - text: "For significant decisions (e.g., \"should we use GraphQL or REST?\"), I write a brief doc with:"
+      - list [ref=e1430]:
+        - listitem [ref=e1431]: "Context: why are we making this decision now?"
+        - listitem [ref=e1432]: "Options: 2-4 realistic alternatives."
+        - listitem [ref=e1433]: "Criteria: what matters (DX, performance, team familiarity, ecosystem maturity)?"
+        - listitem [ref=e1434]: "Scoring: score each option against each criterion."
+        - listitem [ref=e1435]: Recommendation + rationale.
+      - paragraph [ref=e1436]:
+        - strong [ref=e1437]: 3. Reversibility matters
+        - text: "I categorize decisions as:"
+      - list [ref=e1438]:
+        - listitem [ref=e1439]:
+          - strong [ref=e1440]: One-way doors
+          - text: (hard to reverse — framework choice, state management architecture) → slow down, gather more input, prototype.
+        - listitem [ref=e1441]:
+          - strong [ref=e1442]: Two-way doors
+          - text: (easy to reverse — folder structure, naming conventions) → decide and move. Don't over-engineer.
+      - paragraph [ref=e1443]:
+        - strong [ref=e1444]: 4. Prototype critical decisions
+        - text: For one-way doors, build a small proof of concept before committing. A 2-day spike saves months of regret.
+      - paragraph [ref=e1445]:
+        - strong [ref=e1446]: 5. Document the decision (ADR)
+        - text: "Record: what we decided, what we considered, why we chose this, what we accepted as trade-offs. Three months later, someone will ask \"why are we using X?\" and the ADR answers it."
+      - paragraph [ref=e1447]:
+        - strong [ref=e1448]: 6. Communicate and get buy-in
+        - text: An architecture nobody follows is worthless. Present to the team, address concerns, and make sure they understand the "why." Engineers who understand the reasoning become advocates, not resistors.
+      - paragraph [ref=e1449]:
+        - strong [ref=e1450]: "Common trade-offs to be fluent in:"
+      - list [ref=e1451]:
+        - listitem [ref=e1452]: Developer experience vs. runtime performance (TypeScript adds build time but saves debugging time).
+        - listitem [ref=e1453]: Flexibility vs. consistency (headless components vs. styled libraries).
+        - listitem [ref=e1454]: Coupling vs. autonomy (shared library vs. copy-paste duplication between teams).
+        - listitem [ref=e1455]: Speed to market vs. technical soundness (shortcuts now vs. re-platforming later).
+      - separator [ref=e1456]
+      - heading "Quick Reference — Topics by Category" [level=2] [ref=e1457]
+      - table [ref=e1458]:
+        - rowgroup [ref=e1459]:
+          - row "Category Questions" [ref=e1460]:
+            - columnheader "Category" [ref=e1461]
+            - columnheader "Questions" [ref=e1462]
+        - rowgroup [ref=e1463]:
+          - row "Architecture & Design 1, 2, 3, 12, 20" [ref=e1464]:
+            - cell "Architecture & Design" [ref=e1465]:
+              - strong [ref=e1466]: Architecture & Design
+            - cell "1, 2, 3, 12, 20" [ref=e1467]
+          - row "Performance & Web Vitals 5, 15" [ref=e1468]:
+            - cell "Performance & Web Vitals" [ref=e1469]:
+              - strong [ref=e1470]: Performance & Web Vitals
+            - cell "5, 15" [ref=e1471]
+          - row "State Management 6" [ref=e1472]:
+            - cell "State Management" [ref=e1473]:
+              - strong [ref=e1474]: State Management
+            - cell "6" [ref=e1475]
+          - row "Design System 4" [ref=e1476]:
+            - cell "Design System" [ref=e1477]:
+              - strong [ref=e1478]: Design System
+            - cell "4" [ref=e1479]
+          - row "Testing & Quality 10, 11" [ref=e1480]:
+            - cell "Testing & Quality" [ref=e1481]:
+              - strong [ref=e1482]: Testing & Quality
+            - cell "10, 11" [ref=e1483]
+          - row "Security & Auth 8, 17" [ref=e1484]:
+            - cell "Security & Auth" [ref=e1485]:
+              - strong [ref=e1486]: Security & Auth
+            - cell "8, 17" [ref=e1487]
+          - row "DevOps / CI-CD 9" [ref=e1488]:
+            - cell "DevOps / CI-CD" [ref=e1489]:
+              - strong [ref=e1490]: DevOps / CI-CD
+            - cell "9" [ref=e1491]
+          - row "Accessibility 7" [ref=e1492]:
+            - cell "Accessibility" [ref=e1493]:
+              - strong [ref=e1494]: Accessibility
+            - cell "7" [ref=e1495]
+          - row "Internationalization 13" [ref=e1496]:
+            - cell "Internationalization" [ref=e1497]:
+              - strong [ref=e1498]: Internationalization
+            - cell "13" [ref=e1499]
+          - row "API / Integration 16" [ref=e1500]:
+            - cell "API / Integration" [ref=e1501]:
+              - strong [ref=e1502]: API / Integration
+            - cell "16" [ref=e1503]
+          - row "Technical Debt 14" [ref=e1504]:
+            - cell "Technical Debt" [ref=e1505]:
+              - strong [ref=e1506]: Technical Debt
+            - cell "14" [ref=e1507]
+          - row "Leadership & Mentoring 18" [ref=e1508]:
+            - cell "Leadership & Mentoring" [ref=e1509]:
+              - strong [ref=e1510]: Leadership & Mentoring
+            - cell "18" [ref=e1511]
+          - row "Cross-browser / Platform 19" [ref=e1512]:
+            - cell "Cross-browser / Platform" [ref=e1513]:
+              - strong [ref=e1514]: Cross-browser / Platform
+            - cell "19" [ref=e1515]
+      - separator [ref=e1516]
+      - paragraph [ref=e1517]:
+        - emphasis [ref=e1518]: Good luck with your interviews! For architect roles, interviewers evaluate your thinking process and ability to articulate trade-offs as much as the specific answers. Lead with the "why", show you understand the trade-offs, and always tie your answer back to team scale and business impact.

@@ -1,0 +1,564 @@
+- generic [ref=e2]:
+  - navigation [ref=e3]:
+    - button "Sailpoint" [ref=e4] [cursor=pointer]
+    - button "Architect Level" [ref=e5] [cursor=pointer]
+    - button "Other Frontend" [ref=e6] [cursor=pointer]
+  - generic [ref=e7]:
+    - button "Toggle sidebar" [expanded] [ref=e8] [cursor=pointer]: ◀
+    - complementary [ref=e9]:
+      - list [ref=e10]:
+        - listitem [ref=e11] [cursor=pointer]: Angular Interview Part1
+        - listitem [ref=e12] [cursor=pointer]: Angular Interview Part2
+        - listitem [ref=e13] [cursor=pointer]: Behavioral Leadership Prep
+        - listitem [ref=e14] [cursor=pointer]: Frontend Interview Part3
+        - listitem [ref=e15] [cursor=pointer]: Frontend Interview Part4
+        - listitem [ref=e16] [cursor=pointer]: Frontend Architect Interview Prep
+        - listitem [ref=e17] [cursor=pointer]: Rbac Angular Deep Dive
+        - listitem [ref=e18] [cursor=pointer]: Senior Staff Prep Guide
+    - main [ref=e19]:
+      - heading "SailPoint Angular Interview Guide - Part 1" [level=1] [ref=e20]
+      - heading "Senior/Staff Front End Engineer - Pune" [level=2] [ref=e21]
+      - blockquote [ref=e22]:
+        - paragraph [ref=e23]: Comprehensive interview preparation guide with architect-level answers for Angular positions at SailPoint Technologies, Pune.
+      - separator [ref=e24]
+      - heading "Table of Contents - Part 1" [level=2] [ref=e25]
+      - list [ref=e26]:
+        - listitem [ref=e27]:
+          - link "Angular Core Architecture" [ref=e28] [cursor=pointer]:
+            - /url: "#1-angular-core-architecture"
+        - listitem [ref=e29]:
+          - link "Change Detection" [ref=e30] [cursor=pointer]:
+            - /url: "#2-change-detection"
+        - listitem [ref=e31]:
+          - link "RxJS Mastery" [ref=e32] [cursor=pointer]:
+            - /url: "#3-rxjs-mastery"
+        - listitem [ref=e33]:
+          - link "Performance Optimization" [ref=e34] [cursor=pointer]:
+            - /url: "#4-performance-optimization"
+        - listitem [ref=e35]:
+          - link "Modern Angular Features" [ref=e36] [cursor=pointer]:
+            - /url: "#5-modern-angular-features"
+      - separator [ref=e37]
+      - heading "1. Angular Core Architecture" [level=2] [ref=e38]
+      - 'heading "Q1.1: Explain the Angular application architecture in detail" [level=3] [ref=e39]'
+      - paragraph [ref=e40]:
+        - strong [ref=e41]: "Architect-Level Answer:"
+      - paragraph [ref=e42]: "Angular follows a component-based architecture built on several core concepts:"
+      - paragraph [ref=e43]:
+        - strong [ref=e44]: 1. Hierarchical Component Tree
+      - code [ref=e46]:
+        - text: // Root component bootstraps the entire application
+        - generic [ref=e47]: "@Component"
+        - text: "({ selector: 'app-root', template:"
+        - generic [ref=e48]: "` <app-header></app-header> <router-outlet></router-outlet> <app-footer></app-footer> `"
+        - text: "}) export class AppComponent {}"
+      - paragraph [ref=e49]:
+        - strong [ref=e50]: 2. Module System (Traditional)
+      - code [ref=e52]:
+        - generic [ref=e53]: "@NgModule"
+        - text: "({ declarations: [AppComponent, HeaderComponent], // Components, Directives, Pipes imports: [BrowserModule, HttpClientModule], // External modules providers: [AuthService], // Services (DI) bootstrap: [AppComponent] // Entry point }) export class AppModule {}"
+      - paragraph [ref=e54]:
+        - strong [ref=e55]: 3. Dependency Injection Hierarchy
+      - list [ref=e56]:
+        - listitem [ref=e57]:
+          - strong [ref=e58]: Root Injector
+          - text: ": Singleton services ("
+          - code [ref=e59]: "providedIn: 'root'"
+          - text: )
+        - listitem [ref=e60]:
+          - strong [ref=e61]: Module Injector
+          - text: ": Feature module scoped services"
+        - listitem [ref=e62]:
+          - strong [ref=e63]: Component Injector
+          - text: ": Component-level services"
+      - paragraph [ref=e64]:
+        - strong [ref=e65]: 4. Data Flow Architecture
+      - code [ref=e67]: User Action → Component → Service → HTTP → Backend ↓ ↓ Template ← Observable/Signal
+      - paragraph [ref=e68]:
+        - strong [ref=e69]: "Key Architectural Principles:"
+      - list [ref=e70]:
+        - listitem [ref=e71]:
+          - strong [ref=e72]: Separation of Concerns
+          - text: ": Components (UI), Services (Business Logic), Modules (Organization)"
+        - listitem [ref=e73]:
+          - strong [ref=e74]: Unidirectional Data Flow
+          - text: ": Parent → Child via @Input, Child → Parent via @Output"
+        - listitem [ref=e75]:
+          - strong [ref=e76]: Reactive Programming
+          - text: ": RxJS Observables for async operations"
+        - listitem [ref=e77]:
+          - strong [ref=e78]: Lazy Loading
+          - text: ": Route-based code splitting for performance"
+      - paragraph [ref=e79]:
+        - strong [ref=e80]: SailPoint Context
+        - text: ": In enterprise identity management UIs, this architecture supports complex workflows like access requests, certification campaigns, and role management with clear separation between presentation and business logic."
+      - separator [ref=e81]
+      - 'heading "Q1.2: What are the core building blocks of Angular?" [level=3] [ref=e82]'
+      - paragraph [ref=e83]:
+        - strong [ref=e84]: "Architect-Level Answer:"
+      - paragraph [ref=e85]:
+        - strong [ref=e86]: 1. Components
+        - text: "- UI Building Blocks"
+      - code [ref=e88]:
+        - generic [ref=e89]: "@Component"
+        - text: "({ selector: 'app-user-profile', templateUrl: './user-profile.component.html', styleUrls: ['./user-profile.component.scss'], changeDetection: ChangeDetectionStrategy.OnPush, providers: [UserProfileService] // Component-scoped service }) export class UserProfileComponent implements OnInit, OnDestroy {"
+        - generic [ref=e90]: "@Input"
+        - text: "() userId: string;"
+        - generic [ref=e91]: "@Output"
+        - text: () profileUpdated = new
+        - generic [ref=e92]: EventEmitter<User>
+        - text: "(); user$ = this.userService.getUser(this.userId); constructor( private userService: UserService, private cdr: ChangeDetectorRef ) {} }"
+      - paragraph [ref=e93]:
+        - strong [ref=e94]: 2. Directives
+        - text: "- DOM Manipulation"
+      - code [ref=e96]:
+        - text: // Structural Directive - Changes DOM structure
+        - generic [ref=e97]: "@Directive"
+        - text: "({ selector: '[appPermission]' }) export class PermissionDirective { constructor( private templateRef: TemplateRef<any>, private viewContainer: ViewContainerRef, private authService: AuthService ) {}"
+        - generic [ref=e98]: "@Input"
+        - text: "() set appPermission(permission: string) { if (this.authService.hasPermission(permission)) { this.viewContainer.createEmbeddedView(this.templateRef); } else { this.viewContainer.clear(); } } } // Attribute Directive - Changes appearance/behavior"
+        - generic [ref=e99]: "@Directive"
+        - text: "({ selector: '[appHighlight]' }) export class HighlightDirective {"
+        - generic [ref=e100]: "@HostListener"
+        - text: "('mouseenter') onMouseEnter() { this.renderer.setStyle(this.el.nativeElement, 'background-color', 'yellow'); } }"
+      - paragraph [ref=e101]:
+        - strong [ref=e102]: 3. Services
+        - text: "- Business Logic & State"
+      - code [ref=e104]:
+        - generic [ref=e105]: "@Injectable"
+        - text: "({ providedIn: 'root' }) export class IdentityService { private identitiesSubject = new"
+        - generic [ref=e106]: BehaviorSubject<Identity[]>
+        - text: "([]); identities$ = this.identitiesSubject.asObservable(); constructor(private http: HttpClient) {} loadIdentities(): Observable<Identity[]> { return this.http."
+        - generic [ref=e107]:
+          - text: get
+          - generic [ref=e108]: <Identity[]>
+        - text: "('/api/identities').pipe( tap(identities => this.identitiesSubject.next(identities)), catchError(this.handleError) ); } }"
+      - paragraph [ref=e109]:
+        - strong [ref=e110]: 4. Pipes
+        - text: "- Data Transformation"
+      - code [ref=e112]:
+        - text: // Pure Pipe - Cached results
+        - generic [ref=e113]: "@Pipe"
+        - text: "({ name: 'userRole', pure: true }) export class UserRolePipe implements PipeTransform { transform(user: User, roleType: string): string { return user.roles.find(r => r.type === roleType)?.name || 'N/A'; } } // Impure Pipe - Runs on every change detection"
+        - generic [ref=e114]: "@Pipe"
+        - text: "({ name: 'filterActive', pure: false }) export class FilterActivePipe implements PipeTransform { transform(items: any[]): any[] { return items.filter(item => item.active); } }"
+      - paragraph [ref=e115]:
+        - strong [ref=e116]: 5. Modules
+        - text: "- Code Organization"
+      - code [ref=e118]:
+        - generic [ref=e119]: "@NgModule"
+        - text: "({ declarations: [IdentityListComponent, IdentityDetailComponent], imports: [ CommonModule, IdentityRoutingModule, SharedModule ], providers: [ IdentityService, { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true } ] }) export class IdentityModule {}"
+      - paragraph [ref=e120]:
+        - strong [ref=e121]: 6. Guards
+        - text: "- Route Protection"
+      - code [ref=e123]:
+        - generic [ref=e124]: "@Injectable"
+        - text: "({ providedIn: 'root' }) export class AdminGuard implements CanActivate { constructor(private auth: AuthService, private router: Router) {} canActivate(route: ActivatedRouteSnapshot): Observable<boolean> { return this.auth.hasRole('ADMIN').pipe( tap(hasRole => { if (!hasRole) this.router.navigate(['/unauthorized']); }) ); } }"
+      - paragraph [ref=e125]:
+        - strong [ref=e126]: 7. Interceptors
+        - text: "- HTTP Middleware"
+      - code [ref=e128]:
+        - generic [ref=e129]: "@Injectable"
+        - text: "() export class TokenInterceptor implements HttpInterceptor { intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> { const token = localStorage.getItem('auth_token'); const authReq = req.clone({ setHeaders: { Authorization:"
+        - generic [ref=e130]:
+          - text: "`Bearer"
+          - generic [ref=e131]: "${token}"
+          - text: "`"
+        - text: "} }); return next.handle(authReq); } }"
+      - separator [ref=e132]
+      - 'heading "Q1.3: How does Dependency Injection work in Angular?" [level=3] [ref=e133]'
+      - paragraph [ref=e134]:
+        - strong [ref=e135]: "Architect-Level Answer:"
+      - paragraph [ref=e136]: Angular's DI system is a hierarchical injector tree that provides dependencies to components and services.
+      - paragraph [ref=e137]:
+        - strong [ref=e138]: 1. Injector Hierarchy
+      - code [ref=e140]: "Root Injector (providedIn: 'root') ↓ Platform Injector (BrowserModule) ↓ Module Injector (Feature Modules) ↓ Component Injector (Component providers) ↓ Element Injector (Directive providers)"
+      - paragraph [ref=e141]:
+        - strong [ref=e142]: 2. Provider Configuration
+      - code [ref=e144]:
+        - text: "// Method 1: Tree-shakable (Recommended)"
+        - generic [ref=e145]: "@Injectable"
+        - text: "({ providedIn: 'root' }) export class GlobalService { // Singleton across entire app // Automatically removed if unused (tree-shaking) } // Method 2: Module-level"
+        - generic [ref=e146]: "@NgModule"
+        - text: "({ providers: [ FeatureService, // New instance per module { provide: API_URL, useValue: 'https://api.sailpoint.com' }, { provide: LoggerService, useClass: ConsoleLoggerService }, { provide: DataService, useFactory: dataServiceFactory, deps: [HttpClient] } ] }) export class FeatureModule {} // Method 3: Component-level"
+        - generic [ref=e147]: "@Component"
+        - text: "({ providers: [LocalService] // New instance per component }) export class MyComponent {}"
+      - paragraph [ref=e148]:
+        - strong [ref=e149]: 3. Resolution Modifiers
+      - code [ref=e151]:
+        - text: "export class ComplexComponent { constructor( // Default: Look up the injector tree private defaultService: DefaultService, // @Optional: Don't throw error if not found"
+        - generic [ref=e152]: "@Optional"
+        - text: "() private optionalService?: OptionalService, // @Self: Only look in current injector"
+        - generic [ref=e153]: "@Self"
+        - text: "() private localService: LocalService, // @SkipSelf: Skip current injector, look in parent"
+        - generic [ref=e154]: "@SkipSelf"
+        - text: "() private parentService: ParentService, // @Host: Look up to host component only"
+        - generic [ref=e155]: "@Host"
+        - text: "() private hostService: HostService ) {} }"
+      - paragraph [ref=e156]:
+        - strong [ref=e157]: 4. InjectionToken for Non-Class Dependencies
+      - code [ref=e159]:
+        - text: // Define token export const API_CONFIG = new
+        - generic [ref=e160]: InjectionToken<ApiConfig>
+        - text: ('api.config'); // Provide value
+        - generic [ref=e161]: "@NgModule"
+        - text: "({ providers: [ { provide: API_CONFIG, useValue: { baseUrl: 'https://api.sailpoint.com', timeout: 30000, retryAttempts: 3 } } ] }) export class AppModule {} // Inject export class ApiService { constructor("
+        - generic [ref=e162]: "@Inject"
+        - text: "(API_CONFIG) private config: ApiConfig) { console.log(this.config.baseUrl); } }"
+      - paragraph [ref=e163]:
+        - strong [ref=e164]: 5. Modern inject() Function (Angular 14+)
+      - code [ref=e166]: "export class ModernComponent { // No constructor needed private http = inject(HttpClient); private router = inject(Router); private destroyRef = inject(DestroyRef); // Can be used in functions loadData = () => { const logger = inject(LoggerService); return this.http.get('/api/data').pipe( tap(data => logger.log('Data loaded', data)) ); }; }"
+      - paragraph [ref=e167]:
+        - strong [ref=e168]: 6. Multi-Providers
+      - code [ref=e170]:
+        - text: // Multiple interceptors
+        - generic [ref=e171]: "@NgModule"
+        - text: "({ providers: [ { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true }, { provide: HTTP_INTERCEPTORS, useClass: LoggingInterceptor, multi: true }, { provide: HTTP_INTERCEPTORS, useClass: ErrorInterceptor, multi: true } ] })"
+      - paragraph [ref=e172]:
+        - strong [ref=e173]: 7. Lazy Loading Impact
+      - code [ref=e175]:
+        - text: // Eager module - shares root injector
+        - generic [ref=e176]: "@NgModule"
+        - text: "({ providers: [SharedService] // Singleton }) export class EagerModule {} // Lazy module - creates child injector const routes: Routes = [{ path: 'admin', loadChildren: () => import('./admin/admin.module').then(m => m.AdminModule) }];"
+        - generic [ref=e177]: "@NgModule"
+        - text: "({ providers: [AdminService] // New instance per lazy load }) export class AdminModule {}"
+      - paragraph [ref=e178]:
+        - strong [ref=e179]: SailPoint Context
+        - text: ": In identity management systems, DI is crucial for:"
+      - list [ref=e180]:
+        - listitem [ref=e181]: Injecting different authentication strategies (SAML, OAuth, LDAP)
+        - listitem [ref=e182]: Providing environment-specific API endpoints
+        - listitem [ref=e183]: Managing user session state across components
+        - listitem [ref=e184]: Implementing role-based service access
+      - separator [ref=e185]
+      - 'heading "Q1.4: Difference between NgModule vs Standalone Components" [level=3] [ref=e186]'
+      - paragraph [ref=e187]:
+        - strong [ref=e188]: "Architect-Level Answer:"
+      - paragraph [ref=e189]:
+        - strong [ref=e190]: Traditional NgModule Approach (Angular 2-13)
+      - code [ref=e192]:
+        - text: // Feature Module
+        - generic [ref=e193]: "@NgModule"
+        - text: "({ declarations: [ UserListComponent, UserDetailComponent, UserFormComponent ], imports: [ CommonModule, FormsModule, ReactiveFormsModule, MaterialModule, UserRoutingModule ], providers: [UserService], exports: [UserListComponent] // Make available to other modules }) export class UserModule {} // Usage requires importing entire module"
+        - generic [ref=e194]: "@NgModule"
+        - text: "({ imports: [UserModule] // Imports all declarations }) export class AppModule {}"
+      - paragraph [ref=e195]:
+        - strong [ref=e196]: Standalone Components (Angular 14+)
+      - code [ref=e198]:
+        - text: // Standalone Component
+        - generic [ref=e199]: "@Component"
+        - text: "({ selector: 'app-user-list', standalone: true, // Key difference imports: [ CommonModule, FormsModule, UserCardComponent, // Import components directly UserFilterPipe ], template:"
+        - generic [ref=e200]: "` <div *ngFor=\"let user of users\"> <app-user-card [user]=\"user\"></app-user-card> </div> `"
+        - text: "}) export class UserListComponent { users = inject(UserService).getUsers(); } // Direct usage without NgModule import { UserListComponent } from './user-list.component'; // In routes const routes: Routes = [{ path: 'users', loadComponent: () => import('./user-list.component').then(m => m.UserListComponent) }]; // In another component"
+        - generic [ref=e201]: "@Component"
+        - text: "({ standalone: true, imports: [UserListComponent], // Direct import template: '<app-user-list></app-user-list>' }) export class DashboardComponent {}"
+      - paragraph [ref=e202]:
+        - strong [ref=e203]: "Key Differences:"
+      - table [ref=e204]:
+        - rowgroup [ref=e205]:
+          - row "Aspect NgModule Standalone" [ref=e206]:
+            - columnheader "Aspect" [ref=e207]
+            - columnheader "NgModule" [ref=e208]
+            - columnheader "Standalone" [ref=e209]
+        - rowgroup [ref=e210]:
+          - 'row "Declaration Required in NgModule standalone: true" [ref=e211]':
+            - cell "Declaration" [ref=e212]:
+              - strong [ref=e213]: Declaration
+            - cell "Required in NgModule" [ref=e214]
+            - 'cell "standalone: true" [ref=e215]':
+              - code [ref=e216]: "standalone: true"
+          - row "Imports Module-level Component-level" [ref=e217]:
+            - cell "Imports" [ref=e218]:
+              - strong [ref=e219]: Imports
+            - cell "Module-level" [ref=e220]
+            - cell "Component-level" [ref=e221]
+          - row "Dependencies Implicit via module Explicit in component" [ref=e222]:
+            - cell "Dependencies" [ref=e223]:
+              - strong [ref=e224]: Dependencies
+            - cell "Implicit via module" [ref=e225]
+            - cell "Explicit in component" [ref=e226]
+          - row "Tree-shaking Module-level Component-level (better)" [ref=e227]:
+            - cell "Tree-shaking" [ref=e228]:
+              - strong [ref=e229]: Tree-shaking
+            - cell "Module-level" [ref=e230]
+            - cell "Component-level (better)" [ref=e231]
+          - row "Lazy Loading loadChildren loadComponent" [ref=e232]:
+            - cell "Lazy Loading" [ref=e233]:
+              - strong [ref=e234]: Lazy Loading
+            - cell "loadChildren" [ref=e235]:
+              - code [ref=e236]: loadChildren
+            - cell "loadComponent" [ref=e237]:
+              - code [ref=e238]: loadComponent
+          - row "Boilerplate High (module files) Low (self-contained)" [ref=e239]:
+            - cell "Boilerplate" [ref=e240]:
+              - strong [ref=e241]: Boilerplate
+            - cell "High (module files)" [ref=e242]
+            - cell "Low (self-contained)" [ref=e243]
+          - row "Migration All-or-nothing Gradual" [ref=e244]:
+            - cell "Migration" [ref=e245]:
+              - strong [ref=e246]: Migration
+            - cell "All-or-nothing" [ref=e247]
+            - cell "Gradual" [ref=e248]
+      - paragraph [ref=e249]:
+        - strong [ref=e250]: Hybrid Approach (Recommended for Large Apps)
+      - code [ref=e252]:
+        - text: // Standalone component using NgModule-based library
+        - generic [ref=e253]: "@Component"
+        - text: "({ standalone: true, imports: [ CommonModule, MatButtonModule, // Still import Angular Material modules MatIconModule ], template:"
+        - generic [ref=e254]: "` <button mat-raised-button> <mat-icon>save</mat-icon> Save </button> `"
+        - text: "}) export class SaveButtonComponent {} // Bootstrapping standalone app import { bootstrapApplication } from '@angular/platform-browser'; import { provideRouter } from '@angular/router'; import { provideHttpClient } from '@angular/common/http'; bootstrapApplication(AppComponent, { providers: [ provideRouter(routes), provideHttpClient(), provideAnimations(), { provide: API_URL, useValue: 'https://api.sailpoint.com' } ] });"
+      - paragraph [ref=e255]:
+        - strong [ref=e256]: "Migration Strategy:"
+      - code [ref=e258]:
+        - text: "// Step 1: Create standalone components"
+        - generic [ref=e259]: "@Component"
+        - text: "({ standalone: true, imports: [CommonModule, FormsModule], template: '...' }) export class NewComponent {} // Step 2: Use in NgModule (backward compatible)"
+        - generic [ref=e260]: "@NgModule"
+        - text: "({ imports: [NewComponent], // Import standalone component declarations: [OldComponent] }) export class FeatureModule {} // Step 3: Gradually convert all components // Step 4: Remove NgModule when all components are standalone"
+      - paragraph [ref=e261]:
+        - strong [ref=e262]: "When to Use Each:"
+      - paragraph [ref=e263]:
+        - strong [ref=e264]: "Use NgModule when:"
+      - list [ref=e265]:
+        - listitem [ref=e266]: Working with legacy Angular applications
+        - listitem [ref=e267]: Team is not familiar with standalone components
+        - listitem [ref=e268]: Using third-party libraries that require NgModule
+      - paragraph [ref=e269]:
+        - strong [ref=e270]: "Use Standalone when:"
+      - list [ref=e271]:
+        - listitem [ref=e272]: Starting new projects (Angular 15+)
+        - listitem [ref=e273]: Want better tree-shaking and smaller bundles
+        - listitem [ref=e274]: Prefer explicit dependencies
+        - listitem [ref=e275]: Need component-level lazy loading
+      - paragraph [ref=e276]:
+        - strong [ref=e277]: SailPoint Context
+        - text: ": For large identity management platforms, standalone components offer:"
+      - list [ref=e278]:
+        - listitem [ref=e279]: Better code splitting for admin vs user-facing features
+        - listitem [ref=e280]: Clearer dependency graphs for complex workflows
+        - listitem [ref=e281]: Easier testing of isolated components
+        - listitem [ref=e282]: Gradual migration from legacy ExtJS to modern Angular
+      - separator [ref=e283]
+      - 'heading "Q1.5: What is the difference between Component, Directive, and Pipe?" [level=3] [ref=e284]'
+      - paragraph [ref=e285]:
+        - strong [ref=e286]: "Architect-Level Answer:"
+      - paragraph [ref=e287]:
+        - strong [ref=e288]: 1. Components - UI with Template
+      - code [ref=e290]:
+        - generic [ref=e291]: "@Component"
+        - text: "({ selector: 'app-identity-card', template:"
+        - generic [ref=e292]: "` <div class=\"card\"> <h3>{{ identity.name }}</h3> <p>{{ identity.email }}</p> <button (click)=\"onEdit()\">Edit</button> </div> `"
+        - text: ", styles: ["
+        - generic [ref=e293]: "` .card { padding: 16px; border: 1px solid #ccc; } `"
+        - text: "], changeDetection: ChangeDetectionStrategy.OnPush }) export class IdentityCardComponent {"
+        - generic [ref=e294]: "@Input"
+        - text: "() identity: Identity;"
+        - generic [ref=e295]: "@Output"
+        - text: () edit = new
+        - generic [ref=e296]: EventEmitter<Identity>
+        - text: "(); onEdit() { this.edit.emit(this.identity); } }"
+      - paragraph [ref=e297]:
+        - strong [ref=e298]: "Characteristics:"
+      - list [ref=e299]:
+        - listitem [ref=e300]: Has its own template and styles
+        - listitem [ref=e301]: Creates a new element in DOM
+        - listitem [ref=e302]: Can have lifecycle hooks
+        - listitem [ref=e303]: Manages its own state
+        - listitem [ref=e304]: One component per element
+      - paragraph [ref=e305]:
+        - strong [ref=e306]: 2. Directives - Behavior without Template
+      - paragraph [ref=e307]:
+        - strong [ref=e308]: A. Structural Directives
+        - text: "- Modify DOM structure"
+      - code [ref=e310]:
+        - generic [ref=e311]: "@Directive"
+        - text: "({ selector: '[appHasPermission]', standalone: true }) export class HasPermissionDirective { private hasView = false; constructor( private templateRef: TemplateRef<any>, private viewContainer: ViewContainerRef, private authService: AuthService ) {}"
+        - generic [ref=e312]: "@Input"
+        - text: "() set appHasPermission(permission: string) { this.authService.hasPermission(permission).subscribe(hasPermission => { if (hasPermission && !this.hasView) { this.viewContainer.createEmbeddedView(this.templateRef); this.hasView = true; } else if (!hasPermission && this.hasView) { this.viewContainer.clear(); this.hasView = false; } }); } } // Usage <button *appHasPermission=\"'admin:delete'\">Delete User</button>"
+      - paragraph [ref=e313]:
+        - strong [ref=e314]: B. Attribute Directives
+        - text: "- Modify element behavior/appearance"
+      - code [ref=e316]:
+        - generic [ref=e317]: "@Directive"
+        - text: "({ selector: '[appTooltip]', standalone: true }) export class TooltipDirective implements OnInit, OnDestroy {"
+        - generic [ref=e318]: "@Input"
+        - text: "() appTooltip: string;"
+        - generic [ref=e319]: "@Input"
+        - text: "() tooltipPosition: 'top' | 'bottom' = 'top'; private tooltipElement: HTMLElement; constructor( private el: ElementRef, private renderer: Renderer2, private viewContainerRef: ViewContainerRef ) {}"
+        - generic [ref=e320]: "@HostListener"
+        - text: "('mouseenter') onMouseEnter() { this.showTooltip(); }"
+        - generic [ref=e321]: "@HostListener"
+        - text: "('mouseleave') onMouseLeave() { this.hideTooltip(); } private showTooltip() { this.tooltipElement = this.renderer.createElement('div'); this.renderer.addClass(this.tooltipElement, 'tooltip'); this.renderer.setProperty(this.tooltipElement, 'textContent', this.appTooltip); this.renderer.appendChild(document.body, this.tooltipElement); } } // Usage <button appTooltip=\"Click to save changes\" tooltipPosition=\"top\">Save</button>"
+      - paragraph [ref=e322]:
+        - strong [ref=e323]: "Characteristics:"
+      - list [ref=e324]:
+        - listitem [ref=e325]: No template (uses host element)
+        - listitem [ref=e326]: Can be applied to multiple elements
+        - listitem [ref=e327]: Modifies behavior or appearance
+        - listitem [ref=e328]: Uses @HostListener and @HostBinding
+      - paragraph [ref=e329]:
+        - strong [ref=e330]: 3. Pipes - Data Transformation
+      - paragraph [ref=e331]:
+        - strong [ref=e332]: A. Pure Pipes
+        - text: (Default - Cached)
+      - code [ref=e334]:
+        - generic [ref=e335]: "@Pipe"
+        - text: "({ name: 'userStatus', pure: true, // Default standalone: true }) export class UserStatusPipe implements PipeTransform { transform(user: User, showIcon: boolean = false): string { const status = user.active ? 'Active' : 'Inactive'; const icon = showIcon ? (user.active ? '✓' : '✗') : ''; return"
+        - generic [ref=e336]:
+          - text: "`"
+          - generic [ref=e337]: "${icon}"
+          - generic [ref=e338]: "${status}"
+          - text: "`"
+        - text: "; } } // Usage <p>{{ user | userStatus:true }}</p>"
+      - paragraph [ref=e339]:
+        - strong [ref=e340]: B. Impure Pipes
+        - text: (Runs every change detection)
+      - code [ref=e342]:
+        - generic [ref=e343]: "@Pipe"
+        - text: "({ name: 'filterByRole', pure: false, // Runs on every CD cycle standalone: true }) export class FilterByRolePipe implements PipeTransform { transform(users: User[], role: string): User[] { if (!role) return users; return users.filter(user => user.roles.includes(role)); } } // Usage - filters array on every change <div *ngFor=\"let user of users | filterByRole:selectedRole\"> {{ user.name }} </div>"
+      - paragraph [ref=e344]:
+        - strong [ref=e345]: C. Async Pipe
+        - text: (Built-in, handles subscriptions)
+      - code [ref=e347]: "export class UserListComponent { users$ = this.userService.getUsers(); constructor(private userService: UserService) {} } // Template - auto subscribe/unsubscribe <div *ngFor=\"let user of users$ | async\"> {{ user.name }} </div>"
+      - paragraph [ref=e348]:
+        - strong [ref=e349]: "Characteristics:"
+      - list [ref=e350]:
+        - listitem [ref=e351]: Pure functions for data transformation
+        - listitem [ref=e352]: Used in templates with | syntax
+        - listitem [ref=e353]: Pure pipes are cached (performance)
+        - listitem [ref=e354]: Impure pipes run on every change detection
+      - paragraph [ref=e355]:
+        - strong [ref=e356]: "Comparison Table:"
+      - table [ref=e357]:
+        - rowgroup [ref=e358]:
+          - row "Feature Component Directive Pipe" [ref=e359]:
+            - columnheader "Feature" [ref=e360]
+            - columnheader "Component" [ref=e361]
+            - columnheader "Directive" [ref=e362]
+            - columnheader "Pipe" [ref=e363]
+        - rowgroup [ref=e364]:
+          - row "Template Yes (required) No No" [ref=e365]:
+            - cell "Template" [ref=e366]:
+              - strong [ref=e367]: Template
+            - cell "Yes (required)" [ref=e368]
+            - cell "No" [ref=e369]
+            - cell "No" [ref=e370]
+          - row "Selector Element Attribute/Element Name" [ref=e371]:
+            - cell "Selector" [ref=e372]:
+              - strong [ref=e373]: Selector
+            - cell "Element" [ref=e374]
+            - cell "Attribute/Element" [ref=e375]
+            - cell "Name" [ref=e376]
+          - row "Purpose UI + Logic Behavior Transform data" [ref=e377]:
+            - cell "Purpose" [ref=e378]:
+              - strong [ref=e379]: Purpose
+            - cell "UI + Logic" [ref=e380]
+            - cell "Behavior" [ref=e381]
+            - cell "Transform data" [ref=e382]
+          - row "Lifecycle Full lifecycle Full lifecycle Transform only" [ref=e383]:
+            - cell "Lifecycle" [ref=e384]:
+              - strong [ref=e385]: Lifecycle
+            - cell "Full lifecycle" [ref=e386]
+            - cell "Full lifecycle" [ref=e387]
+            - cell "Transform only" [ref=e388]
+          - row "State Can manage state Can manage state Stateless (pure)" [ref=e389]:
+            - cell "State" [ref=e390]:
+              - strong [ref=e391]: State
+            - cell "Can manage state" [ref=e392]
+            - cell "Can manage state" [ref=e393]
+            - cell "Stateless (pure)" [ref=e394]
+          - 'row "Usage <app-comp> <div directive> {{ data | pipe }}" [ref=e395]':
+            - cell "Usage" [ref=e396]:
+              - strong [ref=e397]: Usage
+            - cell "<app-comp>" [ref=e398]:
+              - code [ref=e399]: <app-comp>
+            - cell "<div directive>" [ref=e400]:
+              - code [ref=e401]: <div directive>
+            - 'cell "{{ data | pipe }}" [ref=e402]':
+              - code [ref=e403]: "{{ data | pipe }}"
+      - paragraph [ref=e404]:
+        - strong [ref=e405]: "Real-World SailPoint Example:"
+      - code [ref=e407]:
+        - text: // Component - Identity Card UI
+        - generic [ref=e408]: "@Component"
+        - text: "({ selector: 'app-identity-card', template:"
+        - generic [ref=e409]: "` <div class=\"card\" appHighlight [appTooltip]=\"identity.description\"> <h3>{{ identity.name | titlecase }}</h3> <p>{{ identity.email | lowercase }}</p> <span>{{ identity.lastLogin | date:'short' }}</span> <div *appHasPermission=\"'identity:edit'\"> <button (click)=\"onEdit()\">Edit</button> </div> </div> `"
+        - text: "}) export class IdentityCardComponent {"
+        - generic [ref=e410]: "@Input"
+        - text: "() identity: Identity;"
+        - generic [ref=e411]: "@Output"
+        - text: () edit = new
+        - generic [ref=e412]: EventEmitter<Identity>
+        - text: "(); } // Directive - Highlight on hover"
+        - generic [ref=e413]: "@Directive"
+        - text: "({ selector: '[appHighlight]' }) export class HighlightDirective {"
+        - generic [ref=e414]: "@HostListener"
+        - text: "('mouseenter') onEnter() { this.renderer.setStyle(this.el.nativeElement, 'background', '#f0f0f0'); } } // Pipe - Format identity status"
+        - generic [ref=e415]: "@Pipe"
+        - text: "({ name: 'identityStatus' }) export class IdentityStatusPipe implements PipeTransform { transform(identity: Identity): string { return identity.active ? '✓ Active' : '✗ Inactive'; } }"
+      - separator [ref=e416]
+      - heading "2. Change Detection" [level=2] [ref=e417]
+      - 'heading "Q2.1: Explain Angular change detection in detail" [level=3] [ref=e418]'
+      - paragraph [ref=e419]:
+        - strong [ref=e420]: "Architect-Level Answer:"
+      - paragraph [ref=e421]: Angular's change detection is the mechanism that synchronizes the application state with the UI. It checks for changes in component properties and updates the DOM accordingly.
+      - paragraph [ref=e422]:
+        - strong [ref=e423]: 1. Change Detection Flow
+      - code [ref=e425]: User Event / Async Operation ↓ Zone.js intercepts ↓ Angular Change Detection triggered ↓ Component Tree traversal (top-down) ↓ Check bindings for changes ↓ Update DOM if changed
+      - paragraph [ref=e426]:
+        - strong [ref=e427]: 2. When Change Detection Runs
+      - code [ref=e429]: "// Triggers change detection: // 1. User events <button (click)=\"increment()\">Click</button> // 2. HTTP requests this.http.get('/api/users').subscribe(users => { this.users = users; // CD runs after subscription }); // 3. Timers setTimeout(() => { this.message = 'Updated'; // CD runs after timeout }, 1000); // 4. Manual trigger this.cdr.detectChanges(); this.cdr.markForCheck();"
+      - paragraph [ref=e430]:
+        - strong [ref=e431]: 3. Change Detection Strategies
+      - paragraph [ref=e432]:
+        - strong [ref=e433]: Default Strategy
+        - text: "- Checks entire component tree"
+      - code [ref=e435]:
+        - generic [ref=e436]: "@Component"
+        - text: "({ selector: 'app-user-list', changeDetection: ChangeDetectionStrategy.Default, // Default template:"
+        - generic [ref=e437]: "` <div *ngFor=\"let user of users\"> {{ user.name }} - {{ getStatus(user) }} </div> `"
+        - text: "}) export class UserListComponent { users: User[] = []; // Called on EVERY change detection cycle getStatus(user: User): string { console.log('getStatus called'); // Logs many times! return user.active ? 'Active' : 'Inactive'; } updateUser(user: User) { user.name = 'Updated'; // Mutation detected } }"
+      - paragraph [ref=e438]:
+        - strong [ref=e439]: OnPush Strategy
+        - text: "- Checks only when inputs change"
+      - code [ref=e441]:
+        - generic [ref=e442]: "@Component"
+        - text: "({ selector: 'app-user-card', changeDetection: ChangeDetectionStrategy.OnPush, template:"
+        - generic [ref=e443]: "` <div> {{ user.name }} <button (click)=\"update()\">Update</button> </div> `"
+        - text: "}) export class UserCardComponent {"
+        - generic [ref=e444]: "@Input"
+        - text: "() user: User; // Only checks when this reference changes constructor(private cdr: ChangeDetectorRef) {} update() { // ❌ Won't trigger CD (mutation) this.user.name = 'Updated'; // ✅ Triggers CD (new reference) this.user = { ...this.user, name: 'Updated' }; // ✅ Manual trigger this.cdr.markForCheck(); } }"
+      - paragraph [ref=e445]:
+        - strong [ref=e446]: 4. Change Detection Tree Traversal
+      - code [ref=e448]:
+        - generic [ref=e449]: "@Component"
+        - text: "({ selector: 'app-root', template:"
+        - generic [ref=e450]: "` <app-header></app-header> <app-content [data]=\"data\"></app-content> <app-footer></app-footer> `"
+        - text: "}) export class AppComponent { data = { count: 0 }; increment() { // Default: Checks AppComponent + Header + Content + Footer this.data.count++; // OnPush: Only checks components with changed inputs this.data = { count: this.data.count + 1 }; } }"
+      - paragraph [ref=e451]:
+        - strong [ref=e452]: 5. ChangeDetectorRef API
+      - code [ref=e454]: "export class OptimizedComponent implements OnInit, OnDestroy { constructor(private cdr: ChangeDetectorRef) {} ngOnInit() { // Detach from change detection tree this.cdr.detach(); // Manual updates interval(1000).pipe( takeUntil(this.destroy$) ).subscribe(() => { this.updateData(); this.cdr.detectChanges(); // Run CD for this component only }); } // Mark for check in next CD cycle onDataReceived() { this.cdr.markForCheck(); } // Reattach to CD tree enableAutoDetection() { this.cdr.reattach(); } }"
+      - paragraph [ref=e455]:
+        - strong [ref=e456]: 6. Zone.js Role
+      - code [ref=e458]: "// Zone.js patches async APIs // Before Zone.js const originalSetTimeout = window.setTimeout; window.setTimeout = function(callback, delay) { return originalSetTimeout(() => { callback(); // Angular doesn't know about this }, delay); }; // With Zone.js window.setTimeout = function(callback, delay) { return originalSetTimeout(() => { callback(); Zone.current.run(() => { // Angular triggers change detection here ApplicationRef.tick(); }); }, delay); };"
+      - paragraph [ref=e459]:
+        - strong [ref=e460]: 7. Performance Optimization Patterns
+      - code [ref=e462]:
+        - generic [ref=e463]: "@Component"
+        - text: "({ selector: 'app-dashboard', changeDetection: ChangeDetectionStrategy.OnPush, template:"
+        - generic [ref=e464]: "` <!-- ✅ Async pipe - auto unsubscribe --> <div *ngFor=\"let user of users$ | async; trackBy: trackById\"> {{ user.name }} </div> <!-- ✅ Pure pipe - cached --> <p>{{ data | expensiveTransform }}</p> <!-- ❌ Method call - runs every CD --> <p>{{ calculateTotal() }}</p> <!-- ✅ Property - calculated once --> <p>{{ total }}</p> `"
+        - text: "}) export class DashboardComponent { users$ = this.userService.getUsers(); private _data: Data[]; private _total: number;"
+        - generic [ref=e465]: "@Input"
+        - text: "() set data(value: Data[]) { this._data = value; this._total = this.calculateTotal(); // Calculate once } get total() { return this._total; } trackById(index: number, user: User) { return user.id; // Prevents unnecessary re-renders } }"
+      - paragraph [ref=e466]:
+        - strong [ref=e467]: 8. Debugging Change Detection
+      - code [ref=e469]: "import { ApplicationRef } from '@angular/core'; export class DebugComponent { constructor(private appRef: ApplicationRef) { // Log every CD cycle this.appRef.isStable.subscribe(stable => { console.log('Change detection stable:', stable); }); } // Enable Angular DevTools profiler ngAfterViewInit() { if (typeof ng !== 'undefined') { ng.profiler.timeChangeDetection(); } } }"
+      - paragraph [ref=e470]:
+        - strong [ref=e471]: SailPoint Context
+        - text: ": In identity management dashboards with thousands of users:"
+      - list [ref=e472]:
+        - listitem [ref=e473]: Use OnPush for user cards to prevent unnecessary checks
+        - listitem [ref=e474]: Implement trackBy for large lists of identities
+        - listitem [ref=e475]: Detach CD for real-time widgets that update frequently
+        - listitem [ref=e476]: Use async pipe for observable streams from backend
+      - separator [ref=e477]
