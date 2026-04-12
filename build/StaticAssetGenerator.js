@@ -65,6 +65,7 @@ class StaticAssetGenerator {
       <button class="tab-button active" data-tab="sailpoint">Front End Basics</button>
       <button class="tab-button" data-tab="architect">Architect Level</button>
       <button class="tab-button" data-tab="other">Other Frontend</button>
+      <button class="tab-button" data-tab="systemdesign">System Design</button>
     </nav>
 
     <!-- Main Content Area -->

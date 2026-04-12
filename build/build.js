@@ -35,7 +35,8 @@ async function build() {
     console.log(`   ✓ Found ${files.sailpoint.length} Sailpoint files`);
     console.log(`   ✓ Found ${files.architect.length} Architect files`);
     console.log(`   ✓ Found ${files.other.length} Other files`);
-    console.log(`   Total: ${files.sailpoint.length + files.architect.length + files.other.length} markdown files\n`);
+    console.log(`   ✓ Found ${files.systemdesign.length} System Design files`);
+    console.log(`   Total: ${files.sailpoint.length + files.architect.length + files.other.length + files.systemdesign.length} markdown files\n`);
     
     // Step 2: Process all markdown files
     console.log('📝 Processing markdown files to HTML...');
@@ -44,7 +45,8 @@ async function build() {
     const documents = {
       sailpoint: [],
       architect: [],
-      other: []
+      other: [],
+      systemdesign: []
     };
     
     // Process sailpoint files
@@ -84,6 +86,18 @@ async function build() {
       }
     }
     
+    // Process system design files
+    for (const filePath of files.systemdesign) {
+      try {
+        const fullPath = path.join(workspaceRoot, filePath);
+        const doc = processor.processFile(fullPath, 'systemdesign');
+        documents.systemdesign.push(doc);
+        processedCount++;
+      } catch (error) {
+        console.error(`   ✗ Error processing ${filePath}: ${error.message}`);
+      }
+    }
+    
     console.log(`   ✓ Successfully processed ${processedCount} files\n`);
     
     // Step 3: Bundle content into JavaScript
@@ -105,6 +119,7 @@ async function build() {
     console.log(`   - Sailpoint documents: ${documents.sailpoint.length}`);
     console.log(`   - Architect documents: ${documents.architect.length}`);
     console.log(`   - Other documents: ${documents.other.length}`);
+    console.log(`   - System Design documents: ${documents.systemdesign.length}`);
     console.log(`   - Total documents: ${processedCount}`);
     console.log(`   - Output directory: ${outputDir}\n`);
     console.log('🌐 To view the website, open dist/index.html in a browser');

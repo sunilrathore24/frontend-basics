@@ -24,7 +24,8 @@ class ContentBundler {
     const bundledData = {
       sailpoint: documents.sailpoint || [],
       architect: documents.architect || [],
-      other: documents.other || []
+      other: documents.other || [],
+      systemdesign: documents.systemdesign || []
     };
     
     // Convert to JSON string with proper formatting

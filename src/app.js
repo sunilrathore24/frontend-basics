@@ -191,7 +191,7 @@ class App {
   // ── Parse hash and load the right tab + doc ───────────────────────────────
   _loadFromHash(isInitial) {
     const hash = window.location.hash.slice(1);
-    const validTabs = ['sailpoint', 'architect', 'other'];
+    const validTabs = ['sailpoint', 'architect', 'other', 'systemdesign'];
 
     if (!hash) {
       this._applyTab('sailpoint');
