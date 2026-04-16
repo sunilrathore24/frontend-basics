@@ -14,12 +14,14 @@ class FileScanner {
     const architectDir    = path.join(workspaceRoot, 'content', 'architect');
     const frontendDir     = path.join(workspaceRoot, 'content', 'frontend');
     const systemDesignDir = path.join(workspaceRoot, 'content', 'system-design');
+    const feroDir         = path.join(workspaceRoot, 'content', 'fero');
 
     return {
       sailpoint:    this._scan(sailpointDir, workspaceRoot),
       architect:    this._sortNumerically(this._scan(architectDir, workspaceRoot)),
       other:        this._sortAlphabetically(this._scan(frontendDir, workspaceRoot)),
       systemdesign: this._sortNumerically(this._scan(systemDesignDir, workspaceRoot)),
+      fero:         this._sortAlphabetically(this._scan(feroDir, workspaceRoot)),
     };
   }
 

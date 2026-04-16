@@ -25,7 +25,8 @@ class ContentBundler {
       sailpoint: documents.sailpoint || [],
       architect: documents.architect || [],
       other: documents.other || [],
-      systemdesign: documents.systemdesign || []
+      systemdesign: documents.systemdesign || [],
+      fero: documents.fero || []
     };
     
     // Convert to JSON string with proper formatting
