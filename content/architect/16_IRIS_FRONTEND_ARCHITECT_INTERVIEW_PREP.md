@@ -1,5 +1,5 @@
 # IRIS Software Group — Frontend Architect Interview Prep
-> 30 curated questions with detailed answers
+> 50 curated questions with detailed answers
 > Stack: Angular · React · NodeJS · AWS Lambda · IRIS Elements Platform
 
 ---
@@ -2615,4 +2615,1676 @@ The merge dialog shows a side-by-side diff of the user's local changes vs the se
 
 ---
 
+
+# Category 7: Mobile Strategy & Cross-Platform (Questions 31-32)
+
+---
+
+## Q31. How would you define a mobile strategy for an enterprise HR/payroll product like IRIS that serves 100,000+ customers across 135 countries?
+
+### Key Talking Points
+- **PWA first** for employee self-service (view payslip, request leave, check schedule) — same codebase as web, installable, offline-capable
+- **Cross-platform (React Native / .NET MAUI / Flutter)** only if native features are required (biometrics, background sync, push notifications beyond Web Push)
+- **.NET MAUI** deserves serious evaluation in a .NET shop — keeps the team in C#, but ecosystem is thinner than React Native
+- **Responsive design from day one** in the design system — touch targets (44x44px minimum), mobile breakpoints, gesture support
+- Admin tasks (run payroll, configure benefits) stay desktop-primary; manager approvals and employee self-service are mobile-priority
+- **Capacitor/Cordova** as a thin native wrapper around PWA for app store presence without a separate codebase
+
+### Detailed Answer
+
+Mobile strategy for an enterprise HR/payroll product must start with **user segmentation** — different user roles have fundamentally different mobile needs.
+
+**User role analysis:**
+
+| Role | Primary Device | Key Mobile Actions | Mobile Priority |
+|---|---|---|---|
+| Employee | Mobile (60%+) | View payslip, request leave, check schedule, update personal details | High |
+| Manager | Both (50/50) | Approve leave, review timesheets, quick performance check-ins | Medium-High |
+| HR Admin | Desktop (90%+) | Run payroll, configure benefits, manage org structure, compliance reports | Low |
+| Accountant | Desktop (85%+) | Tax calculations, journal entries, financial reporting | Low |
+
+**Recommended tiered approach:**
+
+**Tier 1: Progressive Web App (PWA) — covers 80% of mobile use cases**
+
+The existing Angular/React web application, built with responsive design, becomes installable on mobile devices via a Service Worker. This is the highest-ROI approach because it requires no separate codebase:
+
+```typescript
+// Service Worker registration in the shell
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js', { scope: '/' });
+}
+
+// manifest.json for installability
+{
+  "name": "IRIS Elements",
+  "short_name": "IRIS",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "theme_color": "#005BF0",
+  "icons": [{ "src": "/icons/192.png", "sizes": "192x192", "type": "image/png" }]
+}
+```
+
+PWA capabilities cover: offline access to cached payslips, push notifications (Web Push API) for leave approvals, home screen installation, and full-screen experience. The design system must enforce mobile-first responsive breakpoints and touch-friendly interactions from day one.
+
+In my experience building the Fero design system (80+ Angular components serving 10+ themes across enterprise products), we embedded responsive behaviour at the component level — every component had mobile breakpoints, touch targets, and gesture support built in. The `@fero/assets` SCSS layer defined breakpoints in the theme, and components consumed them via mixins. The same approach applies here.
+
+**Tier 2: Thin native wrapper (Capacitor) — for app store presence**
+
+If the business requires app store distribution (common in enterprise for MDM/MAM compliance), wrap the PWA in Capacitor:
+
+```bash
+npx cap init "IRIS Elements" com.iris.elements
+npx cap add ios
+npx cap add android
+```
+
+Capacitor provides access to native APIs (biometrics, camera for document scanning, native push notifications) while keeping 95% of the code as the existing web app. The native shell is thin — it's essentially a WebView with native bridge plugins.
+
+**Tier 3: Cross-platform native (React Native / .NET MAUI) — only if justified**
+
+A dedicated native app is warranted only if:
+- Offline-first with complex local data sync is required (e.g., field workers logging time without connectivity for days)
+- Heavy native hardware integration (NFC for time clock, Bluetooth for badge readers)
+- Performance requirements exceed what a WebView can deliver (real-time video for virtual meetings)
+
+For a .NET shop like IRIS, **.NET MAUI** is worth evaluating — it keeps the team in C# and shares business logic with the backend. However, the component ecosystem is significantly thinner than React Native's, and hiring MAUI developers is harder. **React Native** has the largest ecosystem and the most mature component libraries, making it the safer choice if native is required.
+
+**Design system implications:**
+
+The design system must support mobile from the foundation:
+
+```scss
+// Design tokens for touch targets
+$touch-target-minimum: 44px;  // WCAG 2.5.5 Target Size
+$touch-target-comfortable: 48px;  // Material Design recommendation
+
+// Responsive breakpoints in the theme
+$breakpoints: (
+  xs: 0,      // Mobile portrait
+  sm: 576px,  // Mobile landscape
+  md: 768px,  // Tablet
+  lg: 1024px, // Desktop
+  xl: 1280px, // Large desktop
+);
+```
+
+In the Flare design system (React, 15 packages, Cornerstone OnDemand), we handled this through the `ThemeProvider` — `enableTouchTarget` added a CSS class that increased all interactive element hit areas to 44x44px minimum. The same token-driven approach works for IRIS.
+
+---
+
+## Q32. How do you ensure cross-browser, cross-device, and cross-platform testing for an enterprise product used by 100,000+ customers?
+
+### Key Talking Points
+- **Define the support matrix first** — Chrome, Edge, Firefox, Safari (latest 2 versions); desktop primary, tablet secondary, mobile tertiary
+- **Automated (CI)**: component tests + critical E2E in Chrome headless (catches 90%)
+- **Cross-browser (CI)**: BrowserStack/Sauce Labs for critical journeys across browsers
+- **Visual regression**: Chromatic/Percy screenshots across Chrome + Safari (most rendering differences)
+- **Manual (quarterly)**: real device testing for touch interactions, responsive layouts, mobile Safari quirks
+- Enterprise gotchas: corporate proxies breaking WebSockets, locked-down browsers, high-DPI displays, slow networks
+
+### Detailed Answer
+
+Cross-browser testing for an enterprise product requires a **risk-based approach** — you can't test everything everywhere, so you prioritise based on user data and business impact.
+
+**Step 1: Define the support matrix from analytics data**
+
+```
+Browser Support Matrix (based on IRIS user analytics):
+┌──────────────┬────────────┬──────────────────────────────┐
+│ Browser      │ % of Users │ Support Level                │
+├──────────────┼────────────┼──────────────────────────────┤
+│ Chrome       │ 65%        │ Full (latest 2 versions)     │
+│ Edge         │ 20%        │ Full (latest 2 versions)     │
+│ Firefox      │ 8%         │ Full (latest 2 versions)     │
+│ Safari       │ 5%         │ Full (latest 2 versions)     │
+│ IE 11        │ 2%         │ Graceful degradation only    │
+└──────────────┴────────────┴──────────────────────────────┘
+
+Device Matrix:
+┌──────────────┬────────────┬──────────────────────────────┐
+│ Device       │ % of Users │ Testing Approach             │
+├──────────────┼────────────┼──────────────────────────────┤
+│ Desktop      │ 75%        │ Full automated + manual      │
+│ Tablet       │ 15%        │ Responsive + touch testing   │
+│ Mobile       │ 10%        │ PWA + critical journeys      │
+└──────────────┴────────────┴──────────────────────────────┘
+```
+
+**Step 2: Multi-layer testing strategy**
+
+**Layer 1 — Automated in CI (every PR):**
+- Component tests (Jest + Testing Library) in JSDOM — catches logic and interaction bugs.
+- E2E tests (Playwright) in Chrome headless — catches integration bugs.
+- This catches 90% of issues and runs in under 5 minutes.
+
+**Layer 2 — Cross-browser in CI (nightly or per-release):**
+- Run critical E2E journeys across Chrome, Firefox, Safari, Edge using BrowserStack Automate or Playwright's multi-browser support.
+- Focus on the 5-10 most critical user journeys (login → payroll → payslip, leave request → approval).
+
+```yaml
+# Playwright config for cross-browser
+projects:
+  - name: chromium
+    use: { browserName: 'chromium' }
+  - name: firefox
+    use: { browserName: 'firefox' }
+  - name: webkit
+    use: { browserName: 'webkit' }
+```
+
+**Layer 3 — Visual regression (every PR):**
+- Chromatic/Percy captures screenshots of every Storybook story across Chrome and Safari.
+- Catches CSS rendering differences: flexbox gap support, font rendering, shadow rendering, scrollbar styling.
+
+In the Fero CI pipeline, we ran a dedicated accessibility test suite (`test:ci --configuration=a11y`) as a separate CI step, plus Storybook addon-a11y for visual review. The same multi-layer approach applies to cross-browser testing.
+
+**Layer 4 — Manual testing (quarterly release cycle):**
+- Real device testing on physical iOS and Android devices.
+- Screen reader testing: NVDA (Windows), VoiceOver (macOS/iOS), TalkBack (Android).
+- Keyboard-only navigation testing across all browsers.
+- Network throttling testing (3G simulation) for users on slow corporate networks.
+
+**Enterprise-specific gotchas to test for:**
+- Corporate proxies blocking WebSocket connections (SignalR fallback to long-polling).
+- Content Security Policy (CSP) headers breaking inline styles or eval.
+- High-DPI displays (2x, 3x) — test icon rendering and image sharpness.
+- Browser extensions (ad blockers, password managers) interfering with form inputs.
+- Locked-down browsers with disabled features (some government clients disable Web Workers).
+
+---
+
+
+# Category 8: Design System Leadership & Design-to-Code (Questions 33-36)
+
+---
+
+## Q33. How would you architect a design system contribution model where feature teams can extend the system while maintaining consistency and quality?
+
+### Key Talking Points
+- **Layered ownership**: platform team owns tokens + primitives, feature teams own composite patterns, all teams own feature components
+- **Inner-source model**: feature teams contribute via reviewed PRs with a clear "definition of done"
+- **Contribution checklist**: a11y audit, i18n support, theming support, unit tests, Storybook story, documentation
+- **Nx generators** for scaffolding — `yarn add:component` creates the boilerplate so teams start with the right structure
+- **Office hours** and a Slack channel for quick feedback before teams invest time
+- **Semantic versioning** with changelogs so consuming teams know what changed
+
+### Detailed Answer
+
+A design system that only the platform team can contribute to becomes a bottleneck. A design system that anyone can change without review becomes inconsistent. The solution is a **governed inner-source model** with clear ownership tiers.
+
+**Ownership tiers:**
+
+```
+Tier 1: Design Tokens (colors, spacing, typography, shadows)
+    → Owned by: Platform/Design System team
+    → Change process: RFC + design review + platform team approval
+    → Rationale: tokens affect EVERY component — changes cascade everywhere
+
+Tier 2: Core Components (button, input, modal, alert, datagrid)
+    → Owned by: Platform team, contributions welcome via PR
+    → Change process: Proposal → platform review → build → PR review checklist
+    → Rationale: core components are used by every team — API stability matters
+
+Tier 3: Composite Patterns (data table with filters, form wizard, search bar)
+    → Co-owned: Feature teams build, platform team reviews
+    → Change process: Lightweight RFC → build → PR review
+    → Rationale: patterns combine primitives — need consistency but allow innovation
+
+Tier 4: Feature Components (payroll calculator, leave request form)
+    → Owned by: Feature teams autonomously
+    → Change process: Standard team PR process
+    → Rationale: domain-specific, only used by one team
+```
+
+In the Fero design system, we had exactly this model. `@fero/ui` (60+ components) and `@fero/core` were platform-owned. Feature teams in FeroUI consumed them via npm and contributed back through the UXE (UX Engineering) team's fork. Automated uptake PRs via BitBot ensured controlled version upgrades across all 10+ domain teams.
+
+**The contribution workflow:**
+
+```
+1. Feature team identifies a need (new component or variant)
+       ↓
+2. Opens a lightweight proposal (problem, proposed API, design mockup)
+       ↓
+3. Platform team reviews for consistency, a11y, and API design
+   (async review — 48-hour SLA, not a meeting)
+       ↓
+4. Feature team builds it (platform team pairs if needed)
+       ↓
+5. PR goes through the Definition of Done checklist:
+   ☐ Accessibility: axe-core zero violations, keyboard navigable, screen reader tested
+   ☐ Internationalisation: all strings externalised, RTL tested
+   ☐ Theming: uses design tokens, works across all themes
+   ☐ Tests: unit tests (Jest/Jasmine), interaction tests
+   ☐ Storybook: stories for every state (default, hover, disabled, error, loading, RTL)
+   ☐ Documentation: props table, usage examples, do's and don'ts
+   ☐ Bundle impact: no new dependencies without justification
+       ↓
+6. Platform team reviews and merges
+       ↓
+7. Published as a new version, changelog generated automatically
+```
+
+**Tooling that makes contribution easy:**
+
+Custom Nx generators (like Fero's `@fero/nx-plugin` and Flare's `@flare/tools`) scaffold the boilerplate:
+
+```bash
+# Generates component file, types, tests, stories, barrel export
+yarn add:component --name=PayrollSummaryCard --package=ui
+```
+
+This ensures every contributed component starts with the right file structure, test setup, and Storybook configuration. The generator enforces the architecture — teams can't accidentally skip the test file or forget the barrel export.
+
+**What kills contribution models:**
+- Making the process so heavy that teams copy-paste instead of contributing.
+- Platform team becoming a bottleneck by insisting on doing everything themselves.
+- No feedback loop — teams contribute but never hear back.
+- No recognition — contributions should be celebrated, not just accepted.
+
+---
+
+## Q34. How would you establish design-to-code workflows and tooling standards (Figma-to-code pipelines, Storybook, visual regression)?
+
+### Key Talking Points
+- **Design tokens as the contract** between design and engineering — Figma Variables → Style Dictionary → CSS custom properties
+- **Token taxonomy**: global (primitives) → semantic (alias) → component (specific)
+- **Storybook as the living catalogue** — if it's not in Storybook, it doesn't exist
+- **Chromatic/Percy** for visual regression — every PR gets pixel-diff review
+- **Figma plugin integration** — Tokens Studio for token management, Figma Variables for native support
+- The pipeline must be **automated** — manual token sync is a recipe for drift
+
+### Detailed Answer
+
+The design-to-code pipeline ensures that design decisions flow into code without manual translation, reducing drift and miscommunication between designers and engineers.
+
+**The pipeline architecture:**
+
+```
+Figma (Design)
+  │
+  ├── Figma Variables / Tokens Studio plugin
+  │   → Exports tokens as JSON (W3C Design Tokens format)
+  │
+  ▼
+Style Dictionary (Transform)
+  │
+  ├── CSS custom properties (web)
+  ├── SCSS variables (legacy CSS)
+  ├── TypeScript constants (programmatic access)
+  └── Swift/Kotlin values (mobile, if needed)
+  │
+  ▼
+npm package (@iris/design-tokens)
+  │
+  ├── Published to private registry (Artifactory/CodeArtifact)
+  │
+  ▼
+Component Library (@iris/ui)
+  │
+  ├── Components consume tokens: var(--iris-color-primary)
+  │
+  ▼
+Storybook (Documentation + Visual Testing)
+  │
+  ├── Every component, every state, every theme
+  ├── Chromatic captures screenshots on every PR
+  └── Designers review in Storybook, not in code
+```
+
+**Token taxonomy — three levels:**
+
+```json
+// Level 1: Global tokens (primitives) — raw values
+{
+  "color": {
+    "blue": {
+      "500": { "value": "#005BF0" },
+      "400": { "value": "#3380F4" },
+      "300": { "value": "#66A0F7" }
+    }
+  }
+}
+
+// Level 2: Semantic tokens (aliases) — intent-based
+{
+  "color": {
+    "primary": { "value": "{color.blue.500}" },
+    "primary-hover": { "value": "{color.blue.400}" },
+    "primary-light": { "value": "{color.blue.300}" }
+  }
+}
+
+// Level 3: Component tokens (specific) — component-scoped
+{
+  "button": {
+    "background-primary": { "value": "{color.primary}" },
+    "background-primary-hover": { "value": "{color.primary-hover}" }
+  }
+}
+```
+
+In the Fero design system, we used a similar layered approach. The `@lego/design-tokens` package transformed Figma variable exports (`figma-variables.json`) through Style Dictionary into CSS custom properties, with a Tailwind config generated alongside for utility-class consumption. The Flare design system took a different approach — tokens were defined directly in TypeScript with typed helper functions (`th.color('primary')`, `th.space('medium')`), giving compile-time safety at the cost of Figma sync automation.
+
+**Storybook as the single source of truth:**
+
+Every component must have Storybook stories covering:
+- Default state, hover, focus, active, disabled
+- Error state, loading state, empty state
+- All size variants (sm, md, lg)
+- RTL layout
+- Each theme (if multi-theme)
+- Responsive breakpoints (mobile, tablet, desktop)
+
+```typescript
+// Comprehensive story coverage
+export default { title: 'Components/Button', component: Button };
+export const Primary = { args: { variant: 'primary', label: 'Submit' } };
+export const Disabled = { args: { variant: 'primary', label: 'Submit', disabled: true } };
+export const Loading = { args: { variant: 'primary', label: 'Submit', loading: true } };
+export const RTL = { args: { variant: 'primary', label: 'إرسال' }, decorators: [withRTL] };
+export const DarkTheme = { args: { variant: 'primary', label: 'Submit' }, decorators: [withDarkTheme] };
+```
+
+**Visual regression with Chromatic:**
+
+Every PR triggers Chromatic to capture screenshots of all stories. Changes are highlighted with pixel-level diffs. The workflow:
+
+1. Developer changes a component's CSS
+2. Chromatic captures before/after screenshots
+3. If visual changes detected → PR is blocked until a reviewer approves the visual diff
+4. Approved changes become the new baseline
+
+This catches unintended visual regressions (a padding change in one component affecting another) before they reach production.
+
+---
+
+## Q35. How would you implement multi-tenancy, white-labelling, and theming in a frontend architecture for enterprise customers?
+
+### Key Talking Points
+- **Design tokens as CSS custom properties** on `:root` — tenant config overrides them at runtime
+- **Three levels of customisation**: theming (visual), feature toggling (functional), configuration-driven UI (structural)
+- Tenant identification: subdomain (`acme.iris.co.uk`) is cleanest
+- Theme loading **before first paint** to avoid flash of default theme
+- **Never hard-code tenant-specific logic** — if you write `if (tenant === 'acme')`, the architecture is wrong
+- Cache tenant config aggressively (localStorage + service worker) but invalidate on changes
+
+### Detailed Answer
+
+Multi-tenancy in the frontend has three levels of complexity, and enterprise customers typically need all three.
+
+**Level 1 — Theming (visual customisation):**
+
+Design tokens as CSS custom properties are the foundation. The default theme defines all tokens on `:root`. Tenant-specific overrides replace only the tokens that differ:
+
+```css
+/* Default theme */
+:root {
+  --iris-color-primary: #005BF0;
+  --iris-color-primary-hover: #0047C2;
+  --iris-font-family: 'Inter', sans-serif;
+  --iris-border-radius: 4px;
+  --iris-logo-url: url('/assets/iris-logo.svg');
+}
+
+/* Tenant override — loaded at runtime */
+:root[data-tenant="acme"] {
+  --iris-color-primary: #FF6B00;
+  --iris-color-primary-hover: #E05500;
+  --iris-font-family: 'Roboto', sans-serif;
+  --iris-logo-url: url('/assets/acme-logo.svg');
+}
+```
+
+The tenant theme is fetched from a config API at app bootstrap and injected before the first render:
+
+```typescript
+// Bootstrap script — runs before Angular/React initialises
+async function loadTenantTheme() {
+  const tenantId = getTenantFromSubdomain(); // acme.iris.co.uk → "acme"
+  const cached = localStorage.getItem(`theme-${tenantId}`);
+
+  if (cached) {
+    applyTheme(JSON.parse(cached)); // Apply cached theme immediately
+  }
+
+  // Fetch latest in background
+  const theme = await fetch(`/api/tenants/${tenantId}/theme`).then(r => r.json());
+  applyTheme(theme);
+  localStorage.setItem(`theme-${tenantId}`, JSON.stringify(theme));
+}
+
+function applyTheme(theme: TenantTheme) {
+  document.documentElement.setAttribute('data-tenant', theme.tenantId);
+  Object.entries(theme.tokens).forEach(([key, value]) => {
+    document.documentElement.style.setProperty(`--iris-${key}`, value);
+  });
+}
+```
+
+In the Fero design system, we supported 10+ themes (Saba, dark, material-blue, CSOD, PXP, Lumesse, etc.) using SMACSS architecture with per-component config/theme SCSS files. Each theme overrode only the visual layer — structure stayed constant. PostCSS RTL generation automatically created RTL variants. The Flare design system handled white-labelling through the `ThemeProvider`'s `baseColor` prop — setting a brand colour automatically adjusted the entire primary scale.
+
+**Level 2 — Feature toggling (functional customisation):**
+
+Not every tenant gets every feature. A feature flag system controls visibility:
+
+```typescript
+// Angular structural directive
+@Directive({ selector: '[featureToggle]' })
+export class FeatureToggleDirective {
+  @Input() set featureToggle(feature: string) {
+    if (this.featureService.isEnabled(feature)) {
+      this.viewContainer.createEmbeddedView(this.templateRef);
+    } else {
+      this.viewContainer.clear();
+    }
+  }
+}
+
+// Usage
+<div *featureToggle="'ADVANCED_PAYROLL'">
+  <advanced-payroll-dashboard />
+</div>
+```
+
+In Fero, `@fero/core/platform` provided a feature toggle service with both a directive and a route guard — the same pattern IRIS should adopt.
+
+**Level 3 — Configuration-driven UI (structural customisation):**
+
+Enterprise customers want custom fields, custom workflows, and custom form layouts. This requires a **schema-driven rendering approach**:
+
+```typescript
+// JSON schema from backend (per-tenant)
+{
+  "formId": "employee-onboarding",
+  "sections": [
+    {
+      "title": "Personal Details",
+      "fields": [
+        { "key": "firstName", "type": "text", "required": true },
+        { "key": "lastName", "type": "text", "required": true },
+        { "key": "employeeId", "type": "text", "required": true },
+        { "key": "customField_costCentre", "type": "dropdown", "options": "api:/lookups/cost-centres" }
+      ]
+    }
+  ]
+}
+
+// Dynamic form engine renders it
+<dynamic-form [schema]="formSchema" (submit)="onSubmit($event)" />
+```
+
+Libraries like **Formly** (Angular) or **React JSON Schema Form** handle the rendering. The schema lives in the backend, per-tenant. The frontend is a generic renderer — no tenant-specific code.
+
+---
+
+## Q36. How do you build and maintain a CI/CD pipeline for frontend artefacts, including versioning and publishing of shared component packages?
+
+### Key Talking Points
+- **Monorepo CI with affected builds** — Nx only rebuilds/retests what changed
+- **Semantic versioning** with conventional commits — automated changelog generation
+- **Private npm registry** (Artifactory/CodeArtifact) for internal packages
+- **Multi-stage pipeline**: lint → unit test → a11y test → build → visual regression → publish
+- **Bundle size budgets** enforced in CI — fail if exceeded
+- **Automated uptake PRs** — when the design system publishes, consuming apps get automated PRs
+
+### Detailed Answer
+
+A CI/CD pipeline for frontend artefacts must handle both **application deployment** and **library publishing** — they have different lifecycles and different consumers.
+
+**Pipeline architecture:**
+
+```
+PR Opened → CI Pipeline:
+┌─────────────────────────────────────────────────────────┐
+│  Stage 1: Quality Gates (parallel)                       │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌────────┐ │
+│  │ Lint     │  │ Type     │  │ Unit     │  │ A11y   │ │
+│  │ (ESLint  │  │ Check    │  │ Tests    │  │ Tests  │ │
+│  │ +Style-  │  │ (tsc)    │  │ (Jest/   │  │ (axe-  │ │
+│  │  lint)   │  │          │  │ Jasmine) │  │ core)  │ │
+│  └──────────┘  └──────────┘  └──────────┘  └────────┘ │
+├─────────────────────────────────────────────────────────┤
+│  Stage 2: Build                                          │
+│  ┌──────────────────────────────────────────────────┐   │
+│  │ nx affected:build --prod                          │   │
+│  │ Bundle size check (fail if budget exceeded)       │   │
+│  └──────────────────────────────────────────────────┘   │
+├─────────────────────────────────────────────────────────┤
+│  Stage 3: Visual Regression                              │
+│  ┌──────────────────────────────────────────────────┐   │
+│  │ Storybook build → Chromatic upload                │   │
+│  │ Pixel-diff review required before merge           │   │
+│  └──────────────────────────────────────────────────┘   │
+├─────────────────────────────────────────────────────────┤
+│  Stage 4: E2E (critical paths only)                      │
+│  ┌──────────────────────────────────────────────────┐   │
+│  │ Playwright: login → payroll → payslip             │   │
+│  │ Cross-browser: Chrome + Firefox + Safari          │   │
+│  └──────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────┘
+
+Merge to main → Publish Pipeline:
+┌─────────────────────────────────────────────────────────┐
+│  1. Version bump (lerna version --conventional-commits)  │
+│  2. Changelog generation (from conventional commits)     │
+│  3. Build all packages (CJS + ESM + type declarations)   │
+│  4. Publish to Artifactory (lerna publish)                │
+│  5. Tag git commit with version                          │
+│  6. Trigger automated uptake PRs in consuming apps       │
+└─────────────────────────────────────────────────────────┘
+```
+
+In the Fero ecosystem, the CI pipeline published **15 packages** to Artifactory after passing sanity checks (lint, unit tests, a11y tests, build, Storybook build, Cypress E2E). FeroUI consumed these via automated uptake PRs — BitBot created PRs from the UXE fork to `main/develop` whenever a new Fero build was published. This ensured controlled version upgrades across all 10+ domain teams.
+
+The Flare design system used Lerna + Nx with independent versioning — each of the 15 packages had its own version, so a primitives patch could ship without bumping the learning package. Nx caching meant a clean CI build took 8 minutes, but a cached build (no changes to a package) took 30 seconds.
+
+**Key practices:**
+
+1. **Conventional commits** enforce structured commit messages (`feat:`, `fix:`, `BREAKING CHANGE:`). Lerna uses these to automatically determine version bumps and generate changelogs.
+
+2. **Bundle size budgets** in CI prevent regressions:
+```json
+// angular.json
+"budgets": [
+  { "type": "initial", "maximumWarning": "500kb", "maximumError": "1mb" },
+  { "type": "anyComponentStyle", "maximumWarning": "4kb" }
+]
+```
+
+3. **Affected builds** via Nx — only rebuild and retest packages that changed or depend on changed packages. This keeps CI fast even in a large monorepo.
+
+4. **Dual module output** (CJS + ESM) ensures compatibility with both legacy build tools (Jest, older Webpack) and modern bundlers (Vite, Webpack 5) that benefit from tree-shaking.
+
+---
+
+
+# Category 9: Accessibility Deep Dive (Questions 37-38)
+
+---
+
+## Q37. How do you embed accessibility (WCAG compliance) as a core consideration across all front-end work, not bolt it on at the end?
+
+### Key Talking Points
+- Accessibility fails when treated as a checklist at the end — it must be in **design, development, and CI/CD**
+- **Design phase**: a11y-aware Figma plugins, contrast ratios in design reviews, focus order in wireframes
+- **Development phase**: component library handles the hard a11y work (focus trapping, keyboard nav, ARIA live regions)
+- **CI/CD phase**: axe-core in every component test, Lighthouse a11y score tracked per release, custom ESLint rules
+- **Manual testing**: quarterly audits with screen readers (NVDA, VoiceOver) — automation catches 30-40%, humans catch the rest
+- WCAG 2.1 AA as minimum bar, with AAA targets for critical user journeys (payslip viewing, leave requests)
+
+### Detailed Answer
+
+Accessibility must be embedded at three levels: design, development, and verification. If any level is missing, a11y becomes an afterthought that's expensive to retrofit.
+
+**Level 1 — Design phase (prevent issues before code is written):**
+
+- Designers use a11y-aware Figma plugins (Stark, Contrast Checker) to verify colour contrast ratios meet WCAG AA (4.5:1 for normal text, 3:1 for large text).
+- Design reviews include: focus order documentation, touch target sizes (44x44px minimum per WCAG 2.5.5), text alternatives for images, and error state designs.
+- The design system components are accessible by default — teams shouldn't have to think about ARIA roles for a dropdown. The platform team handles focus trapping in modals, keyboard navigation in menus, and ARIA live regions for dynamic content.
+
+**Level 2 — Development phase (catch issues during coding):**
+
+In the Fero design system, we built a multi-layer a11y infrastructure:
+
+```
+@fero/core/cdk/a11y/
+├── FocusKeyManager      — manages focus within lists (arrow key navigation)
+├── TabTrap              — traps focus inside modals/dialogs
+├── Hotkey               — keyboard shortcut registration
+├── AriaList             — ARIA listbox pattern implementation
+├── FocusableItem        — marks elements as focusable in a managed list
+└── KeyboardSelect       — keyboard selection in dropdowns/menus
+
+@fero/core/platform/services/a11y/
+├── AriaService          — programmatic ARIA attribute management
+└── LiveAnnouncer        — screen reader announcements for dynamic content
+```
+
+The Flare design system (React) used `LiveAnnouncerProvider` for screen reader announcements and Radix UI primitives for accessible dropdown, dialog, and tooltip patterns.
+
+**Custom ESLint rules** catch common mistakes at development time:
+
+```javascript
+// @fero/eslint-plugin — template-a11y config
+{
+  "alt-text": "error",                    // images need alt
+  "valid-aria": "error",                  // valid ARIA attributes
+  "elements-content": "error",            // non-empty elements
+  "label-has-associated-control": "error", // form labels
+  "role-has-required-aria": "error",       // ARIA roles have required attributes
+  "mouse-events-have-key-events": "error", // mouse handlers need keyboard equivalents
+  "no-positive-tabindex": "error",         // never use tabindex > 0
+  "no-autofocus": "error",                // autofocus breaks screen reader flow
+  "button-has-type": "error"              // buttons must have explicit type
+}
+```
+
+**Level 3 — CI/CD phase (enforce standards automatically):**
+
+```
+CI Pipeline — Accessibility Gates:
+┌─────────────────────────────────────────────────────────┐
+│  Gate 1: Static Analysis (every PR)                      │
+│  ESLint template-a11y rules — fail build on violations   │
+├─────────────────────────────────────────────────────────┤
+│  Gate 2: Component-Level a11y Tests (every PR)           │
+│  Dedicated a11y test suite (axe-core per component)      │
+│  jest-axe: expect(container).toHaveNoViolations()        │
+├─────────────────────────────────────────────────────────┤
+│  Gate 3: Storybook a11y Audits (visual review)           │
+│  @storybook/addon-a11y (axe-core integration)            │
+│  Every story has an a11y panel with violation details     │
+├─────────────────────────────────────────────────────────┤
+│  Gate 4: Manual 508 Testing (release cycle)              │
+│  Screen reader testing (JAWS, NVDA, VoiceOver)           │
+│  Keyboard-only navigation testing                        │
+│  Section 508 compliance checklist                        │
+└─────────────────────────────────────────────────────────┘
+```
+
+In the Fero CI pipeline, a11y testing was a **dedicated CI step** (`sanity-a11y.sh`) that ran separately from unit tests. This ensured a11y failures were visible and couldn't be hidden among other test results.
+
+**The hard truth:** Automated tools catch ~30-40% of WCAG issues (contrast, missing alt text, missing labels, invalid ARIA). They cannot catch "is this flow actually usable with a screen reader?" or "does the focus order make logical sense?" That requires human testing with assistive technologies. Budget for quarterly manual audits of critical user journeys.
+
+**Standards I'd establish:**
+- WCAG 2.1 AA as the minimum bar for all components.
+- Every new component must pass axe-core with zero violations before merge.
+- An a11y champion in each team — not an expert, just someone who keeps the team honest.
+- Quarterly manual a11y audit of the 10 most critical user journeys.
+
+---
+
+## Q38. How would you architect shared cross-cutting UI concerns — authentication flows, navigation patterns, error handling, and loading states — across a platform with multiple product teams?
+
+### Key Talking Points
+- These are **platform services** owned by the platform team — feature teams consume them, never re-implement
+- **Auth**: centralised in the shell, HTTP interceptor chain attaches tokens, route guards check permissions
+- **Error handling**: global error handler + HTTP interceptor for API errors + component-level error boundaries
+- **Loading states**: shared loading service, consistent pattern (skeleton screens for initial load, inline spinners for actions)
+- **Navigation**: framework-level navigation service with NgRx state, breadcrumb resolution, responsive adaptation
+- Feature teams get these **for free** by using the platform — no configuration needed
+
+### Detailed Answer
+
+Cross-cutting concerns are the infrastructure that every feature team needs but nobody wants to build. The platform team owns them, and they're provided transparently through the framework layer.
+
+**Architecture — the platform service layer:**
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    Feature Teams                         │
+│  Payroll Module  │  HR Module  │  Accounts Module       │
+│  (uses platform  │  (uses      │  (uses platform        │
+│   services       │   platform  │   services              │
+│   transparently) │   services) │   transparently)        │
+├─────────────────────────────────────────────────────────┤
+│                Platform Service Layer                    │
+│                                                          │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌───────────┐ │
+│  │ Auth     │ │ Error    │ │ Loading  │ │ Navigation│ │
+│  │ Service  │ │ Handler  │ │ Service  │ │ Service   │ │
+│  └──────────┘ └──────────┘ └──────────┘ └───────────┘ │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌───────────┐ │
+│  │ i18n     │ │ Feature  │ │ Cache    │ │ Logging   │ │
+│  │ Service  │ │ Toggles  │ │ Service  │ │ Service   │ │
+│  └──────────┘ └──────────┘ └──────────┘ └───────────┘ │
+├─────────────────────────────────────────────────────────┤
+│                    Shell Application                     │
+│  (registers all platform services at bootstrap)          │
+└─────────────────────────────────────────────────────────┘
+```
+
+In the Fero architecture, `@fero/core/platform` provided exactly this layer — i18n, cache, HTTP interceptors, configuration, feature toggles, logging, error handling, dynamic component loading, and a11y services. Feature teams in FeroUI consumed these transparently by importing `@fero/core/platform`.
+
+**Authentication — centralised in the shell:**
+
+The shell owns the entire auth lifecycle. In the FeroUI architecture, the shell decided what to load based on auth state:
+
+```typescript
+// Shell bootstrap — decides login vs main app
+const TRQ_APP = SCUrlUtils.getBaseTrqApp();
+RouterModule.forRoot(ROUTES_MAPPING[TRQ_APP] || LOGIN_ROUTES);
+```
+
+An HTTP interceptor chain (11 interceptors in FeroUI) handled CSRF tokens, auth errors, session timeouts, and audit headers transparently. Remotes shared the same `HttpClient` instance via Module Federation singleton sharing, so every API call from any remote automatically got auth handling.
+
+**Error handling — three layers:**
+
+```typescript
+// Layer 1: Global error handler (catches unhandled exceptions)
+@Injectable()
+class GlobalErrorHandler implements ErrorHandler {
+  handleError(error: Error): void {
+    this.logger.error('Unhandled error', error);
+    this.analytics.track('unhandled_error', { message: error.message, stack: error.stack });
+    // Show user-friendly error boundary, not a white screen
+  }
+}
+
+// Layer 2: HTTP interceptor (catches API errors)
+@Injectable()
+class ErrorInterceptor implements HttpInterceptor {
+  intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
+    return next.handle(req).pipe(
+      catchError((error: HttpErrorResponse) => {
+        switch (error.status) {
+          case 401: this.auth.redirectToLogin(); break;
+          case 403: this.toast.error('You do not have access to this resource.'); break;
+          case 404: this.router.navigate(['/not-found']); break;
+          case 500: this.toast.error('Something went wrong. Please try again.'); break;
+        }
+        return throwError(() => error);
+      })
+    );
+  }
+}
+
+// Layer 3: Component-level error boundaries (prevents cascade)
+// React: ErrorBoundary component
+// Angular: ngIf with error state in the facade
+```
+
+**Loading states — consistent patterns:**
+
+```typescript
+// Shared loading service tracks in-flight HTTP requests
+@Injectable({ providedIn: 'root' })
+class LoadingService {
+  private activeRequests = 0;
+  readonly isLoading$ = new BehaviorSubject<boolean>(false);
+
+  start(): void {
+    this.activeRequests++;
+    this.isLoading$.next(true);
+  }
+
+  stop(): void {
+    this.activeRequests = Math.max(0, this.activeRequests - 1);
+    if (this.activeRequests === 0) this.isLoading$.next(false);
+  }
+}
+```
+
+Standards for loading patterns:
+- **Skeleton screens** for initial page load — show the layout immediately with placeholder content.
+- **Inline spinners** for user-initiated actions (save, submit) — localised to the action area.
+- **Never full-page loading masks** — they block the entire UI and feel slow.
+- **Optimistic updates** for fast actions — update the UI immediately, rollback on error.
+
+**Navigation — framework-level service:**
+
+In Fero, the `TrqFrameworkFacade` managed navigation state via NgRx — a tree-based navigation model with 30+ selectors deriving primary nav, sub-nav, side-nav, and breadcrumbs from a single navigation JSON structure. The facade combined 24 observables into a single `body$` stream that the shell component consumed. Feature teams never touched navigation — they just registered their routes, and the framework handled the rest.
+
+---
+
+
+# Category 10: API Design, SSR & .NET Integration (Questions 39-42)
+
+---
+
+## Q39. How do you approach API design from a frontend architect's perspective? When would you advocate for GraphQL, a BFF layer, or SignalR?
+
+### Key Talking Points
+- **REST** is fine for CRUD operations on well-defined entities — most HR/payroll APIs start here
+- **GraphQL** when multiple clients need different shapes of the same data, or pages aggregate data from multiple services
+- **BFF (Backend-for-Frontend)** when backend APIs are designed for microservice-to-microservice communication and are painful for the frontend
+- **SignalR** for real-time push (payroll run progress, leave approval notifications) — first-class .NET ecosystem support
+- In a .NET shop, an **ASP.NET Core BFF** is natural — backend team owns it, frontend team defines the contract
+- **CQRS on the API side** — read models optimised for frontend views, write models for business logic
+
+### Detailed Answer
+
+The frontend architect's role in API design is to **represent the frontend team's needs** — ensuring APIs are optimised for UI consumption, not just backend convenience.
+
+**The frontend's API wishlist:**
+- One request per view (not 5 REST calls to assemble a dashboard)
+- Only the fields needed (not a 200-field entity when the list view needs 3)
+- Consistent error format across all endpoints
+- Real-time updates where the UX demands it
+- Pagination that works for both infinite scroll and traditional paging
+
+**Decision framework:**
+
+| Scenario | Recommendation | Rationale |
+|---|---|---|
+| Simple CRUD (employee profile, leave request) | REST | Well-understood, .NET has excellent REST support |
+| Dashboard aggregating 5 services | GraphQL or BFF | One request instead of 5, frontend controls the shape |
+| Multiple clients (web, mobile, third-party) | GraphQL | Each client queries exactly what it needs |
+| Real-time updates (payroll progress, notifications) | SignalR | Full-duplex, .NET native, auto-fallback to long-polling |
+| Backend APIs designed for microservices | BFF | Translate microservice APIs into frontend-friendly responses |
+
+**GraphQL for data-heavy views:**
+
+A payroll dashboard might need data from employee, tax, benefits, and time-tracking services. With REST, that's 4+ API calls with over-fetching. With GraphQL:
+
+```graphql
+query PayrollDashboard($employeeId: ID!) {
+  employee(id: $employeeId) {
+    name
+    department
+    salary { gross net taxCode }
+    benefits { type value }
+    timesheet(period: CURRENT) { hoursWorked overtime }
+    leaveBalance { annual sick }
+  }
+}
+```
+
+One request, exactly the fields needed, no over-fetching. The GraphQL server (Apollo Server on Node.js, or Hot Chocolate on .NET) resolves each field from the appropriate backend service.
+
+**BFF for .NET integration:**
+
+When the backend APIs are designed for microservice-to-microservice communication (verbose, deeply nested, requiring multiple calls for one view), a BFF layer translates them into frontend-friendly responses:
+
+```
+Frontend → BFF (ASP.NET Core) → Backend Microservices
+                │
+                ├── GET /bff/payroll-dashboard
+                │   → Calls: Employee API + Tax API + Benefits API + Time API
+                │   → Returns: Single aggregated response shaped for the dashboard
+                │
+                ├── GET /bff/employee-list?fields=name,department,status&page=1&size=50
+                │   → Calls: Employee API with full entity
+                │   → Returns: Sparse fieldset with only requested fields
+```
+
+In a .NET shop, the BFF is an ASP.NET Core API that the backend team can own, but the frontend team defines the contract. This is a natural collaboration point.
+
+**SignalR for real-time:**
+
+SignalR is the .NET ecosystem's first-class real-time communication library. It uses WebSockets by default and automatically falls back to Server-Sent Events or long-polling when WebSockets are blocked (common in corporate environments):
+
+```typescript
+// Frontend — SignalR client
+import { HubConnectionBuilder } from '@microsoft/signalr';
+
+const connection = new HubConnectionBuilder()
+  .withUrl('/hubs/payroll', { accessTokenFactory: () => getAccessToken() })
+  .withAutomaticReconnect()
+  .build();
+
+connection.on('PayrollRunProgress', (progress: PayrollProgress) => {
+  store.dispatch(updatePayrollProgress(progress));
+});
+
+connection.on('PayslipReady', (notification: PayslipNotification) => {
+  showToast({ title: 'Payslip Ready', message: `Your ${notification.period} payslip is available.` });
+});
+
+await connection.start();
+```
+
+SignalR handles reconnection automatically, which is critical for enterprise environments where network interruptions are common.
+
+---
+
+## Q40. How would you implement SSR/SSG and hydration for an enterprise SPA to improve initial load performance?
+
+### Key Talking Points
+- For an enterprise SPA **behind a login**, SSR is less critical than for a public site — but it helps with initial load
+- **SSR for the login page and dashboard shell** — these are the first things users see
+- **CSR for everything else** — feature modules load on demand after the shell renders
+- Angular Universal / Next.js (React) for SSR implementation
+- **Hydration** must be seamless — no flash of unstyled content, no layout shift
+- **SSG (Static Site Generation)** for marketing pages, help docs, changelog — content that doesn't change per user
+- CDN caching of SSR output for the login page (same for all users)
+
+### Detailed Answer
+
+SSR/SSG strategy for an enterprise SPA must be pragmatic — not every page benefits from server rendering, and the complexity cost is real.
+
+**Where SSR adds value:**
+
+| Page | SSR Benefit | Recommendation |
+|---|---|---|
+| Login page | Fastest possible first paint, SEO for public login | SSR + CDN cache |
+| Dashboard shell | Meaningful content before JS loads | SSR with streaming |
+| Feature modules (payroll, HR) | Behind auth, data-dependent | CSR (lazy-loaded) |
+| Help docs, changelog | Static content, SEO matters | SSG |
+| Marketing pages | SEO critical, rarely changes | SSG + CDN |
+
+**Angular Universal implementation:**
+
+```typescript
+// server.ts — Angular Universal server
+import { ngExpressEngine } from '@nguniversal/express-engine';
+import { AppServerModule } from './src/main.server';
+
+app.engine('html', ngExpressEngine({ bootstrap: AppServerModule }));
+
+app.get('/login', (req, res) => {
+  res.render('index', {
+    req, providers: [{ provide: APP_BASE_HREF, useValue: req.baseUrl }]
+  });
+});
+
+// Dashboard — SSR with transfer state to avoid duplicate API calls
+app.get('/dashboard', (req, res) => {
+  res.render('index', {
+    req,
+    providers: [
+      { provide: APP_BASE_HREF, useValue: req.baseUrl },
+      { provide: 'AUTH_TOKEN', useValue: req.cookies.authToken }
+    ]
+  });
+});
+```
+
+**Hydration — the critical detail:**
+
+Angular 16+ introduced **non-destructive hydration** — the server-rendered HTML is preserved and Angular attaches event listeners to existing DOM nodes instead of destroying and recreating them. This eliminates the flash of content that older SSR implementations suffered from:
+
+```typescript
+// app.config.ts
+import { provideClientHydration } from '@angular/platform-browser';
+
+export const appConfig: ApplicationConfig = {
+  providers: [
+    provideClientHydration(),
+    // withHttpTransferCacheInterceptor() — caches SSR API responses
+    // so the client doesn't re-fetch them during hydration
+  ]
+};
+```
+
+**Transfer State** prevents duplicate API calls. During SSR, API responses are serialised into the HTML as a `<script>` tag. During hydration, the client reads from this cache instead of making the same API calls again:
+
+```typescript
+// Service that uses TransferState
+@Injectable()
+class DashboardService {
+  constructor(
+    private http: HttpClient,
+    private transferState: TransferState
+  ) {}
+
+  getDashboardData(): Observable<DashboardData> {
+    const key = makeStateKey<DashboardData>('dashboard');
+    const cached = this.transferState.get(key, null);
+
+    if (cached) {
+      this.transferState.remove(key);
+      return of(cached);
+    }
+
+    return this.http.get<DashboardData>('/api/dashboard').pipe(
+      tap(data => {
+        if (isPlatformServer(this.platformId)) {
+          this.transferState.set(key, data);
+        }
+      })
+    );
+  }
+}
+```
+
+**CDN strategy:**
+
+- Login page SSR output is cached at the CDN (CloudFront) — it's the same for all users.
+- Dashboard SSR output is **not** CDN-cached (it's user-specific), but static assets (JS, CSS, fonts) are cached with long TTLs and content-hashed filenames.
+- SSG pages (help docs, changelog) are pre-built at deploy time and served directly from the CDN.
+
+---
+
+## Q41. How do you ensure frontend solutions integrate effectively with a .NET/C# backend ecosystem?
+
+### Key Talking Points
+- **OpenAPI spec as the contract** — generate TypeScript types from the .NET API's Swagger/OpenAPI spec
+- **SignalR** for real-time communication — .NET native, TypeScript client available
+- **ASP.NET Core BFF** as the frontend-backend bridge when microservice APIs are too granular
+- **Shared validation** — define validation rules in the API spec, generate frontend validators
+- **CORS and auth** — configure .NET middleware for SPA consumption (CORS headers, cookie auth, CSRF tokens)
+- **API versioning** — .NET supports URL-based (`/api/v1/`) and header-based versioning
+
+### Detailed Answer
+
+Working alongside a .NET backend requires establishing clear contracts and leveraging the .NET ecosystem's strengths.
+
+**Contract-first development with OpenAPI:**
+
+The .NET backend publishes an OpenAPI (Swagger) specification. The frontend generates TypeScript types from it, ensuring type safety across the boundary:
+
+```bash
+# Generate TypeScript types from .NET API's OpenAPI spec
+npx openapi-typescript https://api.iris.co.uk/swagger/v1/swagger.json \
+  -o src/types/api.generated.ts
+```
+
+This generates interfaces like `Employee`, `PayrollRun`, `TaxCalculation` directly from the backend's C# models. When the backend adds a required field, the generated types update, and any frontend code that doesn't handle the new field fails to compile.
+
+**In the FeroUI architecture**, the backend was Java/REST APIs, and the frontend consumed them through a facade pattern with typed service interfaces. The same principle applies to .NET — the facade abstracts the API shape, and generated types ensure the contract is honoured.
+
+**SignalR integration:**
+
+The `@microsoft/signalr` npm package provides a TypeScript client that integrates naturally with Angular and React:
+
+```typescript
+// Angular service wrapping SignalR
+@Injectable({ providedIn: 'root' })
+class PayrollHubService {
+  private connection: HubConnection;
+
+  constructor(private auth: AuthService) {
+    this.connection = new HubConnectionBuilder()
+      .withUrl('/hubs/payroll', {
+        accessTokenFactory: () => this.auth.getAccessToken()
+      })
+      .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
+      .configureLogging(LogLevel.Warning)
+      .build();
+  }
+
+  readonly payrollProgress$ = new Observable<PayrollProgress>(subscriber => {
+    this.connection.on('PayrollRunProgress', (data) => subscriber.next(data));
+  });
+
+  async start(): Promise<void> {
+    await this.connection.start();
+  }
+}
+```
+
+**CSRF protection with .NET:**
+
+In the FeroUI auth architecture, CSRF was handled via a nonce pattern — the server injected a CSRF token into the page HTML, and a `CsrfInterceptor` attached it to every outgoing request. The same pattern works with ASP.NET Core's anti-forgery tokens:
+
+```typescript
+// HTTP interceptor attaches CSRF token from cookie
+@Injectable()
+class CsrfInterceptor implements HttpInterceptor {
+  intercept(req: HttpRequest<any>, next: HttpHandler) {
+    const csrfToken = this.cookieService.get('XSRF-TOKEN');
+    if (csrfToken && !req.method.match(/^(GET|HEAD|OPTIONS)$/)) {
+      req = req.clone({ headers: req.headers.set('X-XSRF-TOKEN', csrfToken) });
+    }
+    return next.handle(req);
+  }
+}
+```
+
+---
+
+## Q42. How would you approach SSR/hydration specifically for Angular, and what are the key architectural decisions?
+
+### Key Talking Points
+- Angular 17+ **non-destructive hydration** preserves server-rendered DOM — no flash of content
+- **Deferrable views** (`@defer`) for lazy-loading heavy components without SSR overhead
+- **Transfer State** prevents duplicate API calls during hydration
+- **Platform checks** (`isPlatformBrowser`/`isPlatformServer`) for code that can't run on the server (DOM access, localStorage)
+- **Streaming SSR** sends the shell immediately, streams data-dependent content as it resolves
+- Key decision: which routes get SSR vs CSR — not everything benefits from server rendering
+
+### Detailed Answer
+
+Angular's SSR story has matured significantly since Angular 16. The key architectural decisions determine whether SSR adds value or just adds complexity.
+
+**Non-destructive hydration (Angular 16+):**
+
+Traditional SSR destroyed the server-rendered DOM and rebuilt it from scratch during hydration — causing a visible flash. Angular's non-destructive hydration preserves the existing DOM and attaches event listeners to it:
+
+```typescript
+// app.config.ts
+export const appConfig: ApplicationConfig = {
+  providers: [
+    provideClientHydration(
+      withEventReplay(),           // Replays user events that happened before hydration
+      withHttpTransferCacheInterceptor()  // Caches SSR API responses for client
+    )
+  ]
+};
+```
+
+`withEventReplay()` is critical for enterprise apps — if a user clicks a button before hydration completes, the event is captured and replayed after hydration. Without this, early interactions are silently lost.
+
+**Deferrable views for performance:**
+
+Angular 17's `@defer` blocks allow lazy-loading heavy components without including them in the SSR output:
+
+```html
+<!-- Dashboard template -->
+<iris-summary-cards [data]="summaryData" />  <!-- SSR'd — critical content -->
+
+@defer (on viewport) {
+  <iris-revenue-chart [data]="chartData" />  <!-- Lazy-loaded when scrolled into view -->
+} @placeholder {
+  <iris-skeleton-chart />  <!-- Shown during SSR and until chart loads -->
+}
+
+@defer (on interaction) {
+  <iris-advanced-filters />  <!-- Loaded when user clicks "Filters" -->
+} @placeholder {
+  <button>Show Filters</button>
+}
+```
+
+This keeps the SSR payload small (only critical above-fold content) while deferring heavy components (charts, complex forms) until they're needed.
+
+**Platform-aware code:**
+
+Code that accesses browser APIs (DOM, localStorage, window) must be guarded:
+
+```typescript
+import { isPlatformBrowser } from '@angular/common';
+
+@Injectable()
+class StorageService {
+  constructor(@Inject(PLATFORM_ID) private platformId: Object) {}
+
+  get(key: string): string | null {
+    if (isPlatformBrowser(this.platformId)) {
+      return localStorage.getItem(key);
+    }
+    return null; // Server-side — no localStorage
+  }
+}
+```
+
+In the Fero architecture, `@fero/core/platform/cache` provided a caching service with local/session/memory storage backends. The memory backend worked on both server and client, while local/session backends were browser-only. The same abstraction pattern applies to SSR-compatible services.
+
+---
+
+
+# Category 11: Team Enablement & Technical Leadership (Questions 43-46)
+
+---
+
+## Q43. How would you upskill and support Senior Engineers and Engineering Leads in front-end best practices across multiple teams?
+
+### Key Talking Points
+- **Reference implementations** over slide decks — working code that teams can clone and learn from
+- **Pairing sessions** with senior engineers on real feature work — not abstract workshops
+- **Architecture guild** (bi-weekly) for cross-team alignment and knowledge sharing
+- **ADRs (Architecture Decision Records)** committed to the repo — institutional knowledge that outlives individuals
+- **Tech talks** (monthly) where teams present their solutions — peer learning scales better than top-down teaching
+- **PR reviews** as teaching moments — not just "approve/reject" but "here's why and here's a better pattern"
+
+### Detailed Answer
+
+Upskilling across multiple teams requires a mix of **structured learning** and **embedded coaching**. The goal is to build self-sufficient teams, not create a dependency on the architect.
+
+**Structured learning (scalable, asynchronous):**
+
+1. **Reference implementations** — the single most effective enablement tool. Instead of a 50-page best practices document, create a working application that demonstrates every pattern: component structure, state management, API integration, testing, accessibility, i18n. Teams clone it for new projects and learn by reading real code.
+
+```
+iris-reference-app/
+├── src/
+│   ├── app/
+│   │   ├── shell/              ← Auth, navigation, layout
+│   │   ├── features/
+│   │   │   ├── employee-list/  ← List view pattern (pagination, filtering, virtual scroll)
+│   │   │   ├── employee-detail/← Detail view pattern (form, validation, save)
+│   │   │   └── dashboard/      ← Dashboard pattern (widgets, lazy loading, skeleton)
+│   │   ├── shared/
+│   │   │   ├── ui/             ← Shared presentational components
+│   │   │   ├── data-access/    ← API services, state management
+│   │   │   └── utils/          ← Pure utility functions
+│   │   └── core/               ← Auth, guards, interceptors
+│   └── tests/                  ← Testing patterns for each layer
+├── docs/
+│   ├── architecture.md         ← Architecture overview
+│   ├── patterns/               ← Pattern documentation with code examples
+│   └── adrs/                   ← Architecture Decision Records
+└── .storybook/                 ← Storybook with all component stories
+```
+
+2. **Architecture Decision Records (ADRs)** — every significant decision is documented with context, alternatives considered, and consequences. Future developers understand *why* the codebase looks the way it does.
+
+3. **Monthly tech talks** — each team presents a technical challenge they solved. This creates peer learning at scale — 10 teams means 10 different perspectives on frontend problems.
+
+**Embedded coaching (high-impact, synchronous):**
+
+1. **Pairing sessions** — the architect pairs with senior engineers on real feature work, not contrived exercises. "Let's build this payroll dashboard together using the patterns from the reference app." This transfers knowledge through practice.
+
+2. **Design reviews** — before a team starts building a significant feature, the architect reviews the proposed approach. This catches architectural issues early, before code is written. Keep it lightweight — 30 minutes, whiteboard or Miro, not a formal presentation.
+
+3. **PR reviews as teaching** — when reviewing PRs, explain the *why* behind suggestions. Not "use OnPush here" but "OnPush here would reduce change detection cycles by ~80% because this component only needs to update when its inputs change. Here's how to refactor it..."
+
+4. **Office hours** — a weekly 1-hour slot where any engineer can drop in with questions. Low-friction access to architectural guidance without scheduling meetings.
+
+**Measuring enablement success:**
+- Are teams following the reference implementation patterns without being told?
+- Are teams contributing to the design system (not just consuming)?
+- Are architectural violations decreasing in PR reviews over time?
+- Can teams make sound architectural decisions independently?
+
+---
+
+## Q44. How would you lead the evaluation and recommendation process for a web and mobile UI technology stack, building team consensus?
+
+### Key Talking Points
+- **Weighted scorecard** across non-negotiables (enterprise maturity, hiring pool, .NET integration) and weighted criteria (performance, a11y, testing, mobile strategy)
+- **Time-boxed spike** (2-3 weeks) with 2-3 candidates building the same feature — real code, not slide decks
+- **Involve senior engineers from each team** in the evaluation — they need to own the decision
+- Present a **recommendation with trade-offs**, not a decree
+- Consider "different tools for different contexts" — Angular for main product, React Native for mobile, Web Components for shared shell
+- **Migration path** matters as much as the destination — can we incrementally adopt, or is it big-bang?
+
+### Detailed Answer
+
+Technology selection for an enterprise product suite is a **high-stakes, low-reversibility decision**. The process must be rigorous, inclusive, and transparent.
+
+**Phase 1: Define evaluation criteria (week 1)**
+
+Assemble a cross-team evaluation committee (1 senior engineer per team + architect + engineering lead). Define criteria together:
+
+**Non-negotiables (must-have):**
+- Enterprise maturity — LTS support, security patches, corporate backing
+- Ecosystem depth — component libraries, tooling, IDE support
+- Hiring pool — can we actually find developers who know this?
+- .NET backend integration — how well does it work with ASP.NET Core APIs, SignalR?
+
+**Weighted criteria (scored 1-5):**
+
+| Criterion | Weight | Angular | React | Blazor |
+|---|---|---|---|---|
+| Performance (bundle size, SSR, hydration) | 15% | 4 | 5 | 3 |
+| Accessibility primitives | 10% | 5 | 4 | 3 |
+| Testing story (unit, component, e2e) | 10% | 5 | 5 | 3 |
+| Mobile strategy alignment | 10% | 3 | 5 | 4 |
+| State management maturity | 10% | 5 | 5 | 3 |
+| Design system ecosystem | 10% | 4 | 5 | 2 |
+| Learning curve for existing team | 15% | 4 | 4 | 5 |
+| Migration path from legacy | 10% | 4 | 4 | 3 |
+| Long-term viability | 10% | 5 | 5 | 4 |
+
+**Phase 2: Time-boxed spike (weeks 2-4)**
+
+Each candidate framework builds the **same feature** — a representative slice of the product (e.g., an employee list with filtering, sorting, pagination, and a detail view with a form). This reveals real-world ergonomics that documentation can't show.
+
+The spike deliverables:
+- Working feature with tests
+- Bundle size analysis
+- Developer experience notes (tooling, debugging, error messages)
+- Accessibility audit (axe-core)
+- Integration with .NET API (REST + SignalR)
+
+**Phase 3: Recommendation (week 5)**
+
+Present findings to engineering leadership with:
+- Scorecard results
+- Spike learnings (what was easy, what was painful)
+- Total cost of ownership (migration effort, training, hiring)
+- Recommended approach with trade-offs clearly stated
+- Dissenting opinions documented (not suppressed)
+
+**The answer might be "different tools for different contexts":**
+- Angular for the main product (opinionated, TypeScript-first, good for large teams with .NET backend)
+- React for specific modules or acquisitions that already use it
+- Web Components for shared shell elements that need to work across frameworks
+- React Native or .NET MAUI for mobile (if PWA isn't sufficient)
+
+---
+
+## Q45. How would you lead hiring initiatives and technical assessment for front-end engineering skills?
+
+### Key Talking Points
+- **Structured interview process**: coding round → technical deep-dive → system design → behavioural/leadership
+- **Coding round**: practical component building (Star Rating, search bar with debounce) — not algorithm puzzles
+- **System design round**: architecture discussion (design a design system, architect a micro-frontend) — tests thinking, not memorisation
+- **Take-home alternative**: small project (4-hour time-box) for candidates who perform better without live pressure
+- **Rubric-based scoring** to reduce bias — every interviewer scores against the same criteria
+- **Hire for growth potential**, not just current skill — a strong engineer who hasn't used Angular can learn it in weeks
+
+### Detailed Answer
+
+Hiring frontend architects and senior engineers requires assessing both **technical depth** and **leadership capability**. The process must be rigorous but respectful of candidates' time.
+
+**Interview structure (4 rounds, 3-4 hours total):**
+
+**Round 1: Coding (60 min) — practical component building**
+
+Build a real component, not solve an algorithm puzzle. Examples:
+- Star Rating component (accessibility, keyboard navigation, controlled component pattern)
+- Search bar with debounce (async handling, API integration, loading states)
+- Data table with sorting and pagination (state management, performance)
+
+Evaluate: code quality, accessibility awareness, testing instinct, component API design.
+
+**Round 2: Technical Deep-Dive (60 min) — framework and architecture knowledge**
+
+Discussion-based, not whiteboard coding. Topics:
+- Change detection strategies (Angular) or reconciliation (React) — when and why
+- State management philosophy — what goes where and why
+- Performance optimisation — how would you debug a slow dashboard?
+- TypeScript at the architecture level — discriminated unions, generics, generated types
+
+Evaluate: depth of understanding, ability to explain trade-offs, real-world experience.
+
+**Round 3: System Design (60 min) — architecture and strategic thinking**
+
+Open-ended design discussion:
+- "Design a design system for a product suite with 10 teams"
+- "Architect a micro-frontend migration for a legacy desktop app"
+- "Design a real-time collaborative editing feature"
+
+Evaluate: systems thinking, trade-off analysis, communication clarity, awareness of enterprise concerns (multi-tenancy, i18n, a11y).
+
+**Round 4: Behavioural/Leadership (45 min) — for senior/lead roles**
+
+- "Tell me about a time you influenced a technical decision across multiple teams"
+- "How do you handle disagreement with a team that wants to use a different approach?"
+- "Describe how you've mentored a junior engineer"
+
+Evaluate: communication, influence without authority, mentorship capability, conflict resolution.
+
+**Rubric-based scoring:**
+
+Every interviewer scores against predefined criteria (1-5 scale):
+- Technical depth (framework knowledge, JS fundamentals, TypeScript)
+- Architecture thinking (system design, trade-off analysis, scalability)
+- Code quality (readability, testing, accessibility)
+- Communication (explains clearly, listens, asks good questions)
+- Leadership potential (mentorship, influence, strategic thinking)
+
+This reduces bias and ensures consistent evaluation across candidates.
+
+---
+
+## Q46. Describe your approach to facilitating alignment between product design intent and engineering implementation.
+
+### Key Talking Points
+- **Design system as the shared language** — when designers say "primary button, large" and engineers have `<Button variant="primary" size="lg">`, there's no ambiguity
+- **Design tokens as the contract** — if the token exists, it's supported; if it doesn't, it needs to be added
+- **Storybook as the handoff tool** — designers review in Storybook, not in static Figma specs
+- **Design reviews with engineers present** — engineers flag technical constraints early
+- **Engineering reviews with designers present** — designers verify the built component matches intent
+- **Weekly design-engineering sync** (30 min) — lightweight, regular alignment
+
+### Detailed Answer
+
+The gap between design and engineering shows up as: designers hand off pixel-perfect mockups, engineers build something that looks close but behaves differently, designers are frustrated, engineers feel micromanaged. The fix is structural, not cultural.
+
+**The design system IS the shared language:**
+
+When designers and engineers both reference the same design system, ambiguity disappears. A designer says "primary button, large, with leading icon" and the engineer writes:
+
+```tsx
+<Button variant="primary" size="lg" icon={<DownloadIcon />}>
+  Download Report
+</Button>
+```
+
+There's no interpretation gap because the component's visual output is defined by the design system, not by the engineer's reading of a Figma mockup.
+
+**Design tokens as the contract:**
+
+Designers define tokens in Figma (using Figma Variables or Tokens Studio). Engineers consume them in code. The rule is simple: if the token exists in the design system, it's supported. If a designer uses a colour that isn't a token, it needs to be added through the contribution process — no one-off hex values in code.
+
+In the Fero design system, the `@lego/design-tokens` package was the single source of truth — Figma variable exports were transformed through Style Dictionary into CSS custom properties. In the Flare design system, tokens were TypeScript objects accessed through typed helpers (`th.color('primary')`). Both approaches enforce the contract — the mechanism differs, the principle is the same.
+
+**Storybook as the handoff and review tool:**
+
+Instead of designers reviewing static screenshots, they review components in Storybook where they can:
+- See real interactions (hover, focus, click)
+- Test responsive behaviour (resize the viewport)
+- Check accessibility (a11y addon panel)
+- Verify all states (default, error, disabled, loading)
+
+"Does this match the design?" becomes a Storybook review, not a screenshot comparison.
+
+**Collaborative workflow:**
+
+```
+1. Designer creates mockup in Figma
+       ↓
+2. Design review WITH engineers present (30 min)
+   Engineers flag: "this animation will be janky on low-end devices"
+   Engineers flag: "this layout breaks with RTL text"
+   Engineers flag: "this data isn't available in one API call"
+       ↓
+3. Engineer builds the component
+       ↓
+4. Engineering review WITH designer present (15 min in Storybook)
+   Designer verifies: spacing, colours, interactions match intent
+   Designer flags: "the hover state is missing", "the loading skeleton is too fast"
+       ↓
+5. Component merged into design system
+       ↓
+6. Both designer and engineer sign off
+```
+
+This two-way review process catches issues from both directions — technical constraints that designers miss, and design nuances that engineers miss.
+
+---
+
+
+# Category 12: First 12 Months & Strategic Outcomes (Questions 47-50)
+
+---
+
+## Q47. Walk through your plan for the first 12 months as Frontend Architect — how would you deliver the key outcomes listed in the JD?
+
+### Key Talking Points
+- **Months 1-3**: Listen, audit, build relationships — understand the current landscape before proposing changes
+- **Months 3-6**: Technology recommendation + design system foundation — the two highest-impact deliverables
+- **Months 6-9**: Reference implementation + testing strategy rollout — enable teams to follow the new standards
+- **Months 9-12**: Measure, iterate, scale — prove the value through metrics and expand adoption
+- **Throughout**: Team enablement via pairing, reviews, workshops — the architect's impact is multiplied through others
+
+### Detailed Answer
+
+The first 12 months follow a **listen → propose → enable → measure** cadence. Rushing to solutions without understanding the current state is the most common architect failure mode.
+
+**Months 1-3: Discovery & Relationship Building**
+
+| Week | Activity | Deliverable |
+|---|---|---|
+| 1-2 | Meet every team lead and senior engineer. Understand their stack, pain points, delivery cadence. | Stakeholder map + pain point inventory |
+| 3-4 | Audit the existing frontend landscape. How many frameworks? How much duplication? Where are the inconsistencies? | Current state assessment document |
+| 5-8 | Identify the "golden path" — what most teams are already doing well. Map the gap between current state and desired state. | Gap analysis + opportunity map |
+| 9-12 | Write an RFC with proposed frontend strategy. Circulate it. Let teams poke holes. Incorporate feedback. | Frontend Strategy RFC (2 pages, not 20) |
+
+**Key principle:** The strategy document should be 2 pages, not 20. If it's too long, nobody reads it. Focus on: technology direction, design system vision, testing standards, and team enablement approach.
+
+**Months 3-6: Technology Recommendation + Design System Foundation**
+
+**Outcome 1 — Technology & Framework Recommendation:**
+- Run the evaluation process (scorecard + time-boxed spike with 2-3 candidates).
+- Involve senior engineers from each team — they need to own the decision.
+- Present recommendation with trade-offs to engineering leadership.
+- Secure approval and communicate the decision with an ADR.
+
+**Outcome 2 — Design System Foundation:**
+- Establish the token layer (design tokens from Figma → CSS custom properties).
+- Build 10-15 core components (button, input, modal, alert, card, table, form controls).
+- Set up Storybook as the living catalogue.
+- Define the contribution model (inner-source with review checklist).
+- Get at least 2 delivery teams actively using the design system.
+
+**Months 6-9: Reference Implementation + Testing Strategy**
+
+**Outcome 3 — Frontend Reference Implementation:**
+- Build a reference app that demonstrates every pattern: component structure, state management, API integration, testing, a11y, i18n.
+- Teams clone it for new projects — it's the "golden path" in working code.
+- Document patterns in ADRs committed alongside the code.
+
+**Outcome 4 — Testing Strategy Rollout:**
+- Define the testing pyramid: unit (70%) → component (25%) → E2E (5%).
+- Standardise tooling: Jest/Vitest for unit, Testing Library for component, Playwright for E2E.
+- Set up visual regression (Chromatic/Percy) for the design system.
+- Establish coverage thresholds and bundle size budgets in CI.
+- Roll out to 2 teams first, iterate based on feedback, then expand.
+
+**Months 9-12: Measure, Iterate, Scale**
+
+**Outcome 5 — Team Enablement:**
+- Monthly tech talks where teams present their solutions.
+- Pairing sessions with senior engineers on real feature work.
+- Architecture guild meetings (bi-weekly) for cross-team alignment.
+- Measure: Are teams following patterns independently? Are they contributing to the design system? Are architectural violations decreasing?
+
+**Metrics to track:**
+- Design system adoption: % of new features using design system components
+- Bundle size trend: are bundles getting smaller or larger?
+- Test coverage trend: is coverage increasing?
+- Lighthouse scores: LCP, CLS, INP trends across products
+- a11y violations: are axe-core violations decreasing?
+- Developer satisfaction: quarterly survey on tooling and standards
+
+---
+
+## Q48. How would you handle a situation where different teams want to use different frontend frameworks (e.g., one team wants React, another wants Angular)?
+
+### Key Talking Points
+- **Don't mandate — facilitate a decision** with data, not authority
+- Run the evaluation process (scorecard + spike) with representatives from both teams
+- Consider whether "both" is actually viable — Web Components as the bridge layer
+- The cost of "both" is real: duplicate tooling, duplicate training, duplicate hiring pipelines
+- If "both" is the answer, establish clear boundaries: which framework for which context, shared design tokens as the unifying layer
+- **The worst outcome is a silent split** where teams go rogue without a conscious decision
+
+### Detailed Answer
+
+Framework disagreements are common in large organisations, and the architect's role is to **facilitate a decision, not impose one**.
+
+**Step 1: Understand the motivations**
+
+Meet with both teams separately. Understand *why* they prefer their framework:
+- Is it familiarity? (They know React, they don't know Angular)
+- Is it technical? (React's ecosystem is better for their specific use case)
+- Is it cultural? (They've always used React and don't want to change)
+
+Often, the preference is familiarity-based, not technically justified. That's valid — developer productivity matters — but it needs to be weighed against the cost of maintaining two ecosystems.
+
+**Step 2: Quantify the cost of "both"**
+
+| Cost | Single Framework | Two Frameworks |
+|---|---|---|
+| Design system | One component library | Two libraries OR Web Components bridge |
+| Tooling | One ESLint config, one test setup | Two of everything |
+| Hiring | One job description | Two hiring pipelines |
+| Training | One onboarding path | Two onboarding paths |
+| Knowledge sharing | Easy — everyone speaks the same language | Harder — React patterns don't transfer to Angular |
+| Shared libraries | Direct imports | Must be framework-agnostic (Web Components or vanilla JS) |
+
+**Step 3: Evaluate whether "both" is justified**
+
+Sometimes it is:
+- An acquisition brought a React codebase that's too large to rewrite
+- A specific product area (mobile, data visualisation) genuinely benefits from a different framework
+- The organisation is large enough to sustain two ecosystems (50+ frontend engineers)
+
+In the Fero/FeroUI ecosystem, the team chose a **multi-framework strategy** deliberately: Angular components (`@fero/ui`) for the main product, Lit Web Components (`@lego/elements-galaxy`) for framework-agnostic shell elements. Design tokens (`@lego/design-tokens`) were the unifying layer — both Angular and Lit components consumed the same CSS custom properties. This worked because the boundary was clear: Angular for product features, Web Components for cross-framework shell elements.
+
+**Step 4: If "both" is the answer, establish clear boundaries**
+
+- Define which framework is used for which context (documented in an ADR)
+- Design tokens as the shared visual language (CSS custom properties consumed by both)
+- Web Components for any UI that must work in both frameworks
+- Shared TypeScript libraries for non-UI code (API clients, utilities, types)
+- Separate but consistent CI pipelines for each framework
+
+**Step 5: If "one" is the answer, manage the transition**
+
+- Acknowledge the losing team's preference — they need to feel heard
+- Provide training and pairing to help them ramp up on the chosen framework
+- Set a migration timeline for existing code (Strangler Fig pattern, not big-bang rewrite)
+- Celebrate early wins to build momentum
+
+---
+
+## Q49. How would you define and measure success for the frontend architecture across the product suite?
+
+### Key Talking Points
+- **Quantitative metrics**: bundle size, Lighthouse scores (LCP, CLS, INP), test coverage, a11y violations, build times
+- **Adoption metrics**: % of teams using design system, % of new features following reference patterns
+- **Quality metrics**: production bug rate (frontend-specific), customer-reported UI issues
+- **Developer experience metrics**: build time, CI pipeline duration, developer satisfaction survey
+- **Business metrics**: time-to-market for new features, onboarding time for new engineers
+
+### Detailed Answer
+
+Success metrics must cover **technical quality**, **team adoption**, **developer experience**, and **business impact**. Tracking only technical metrics misses the point — the architecture exists to enable teams to deliver value faster.
+
+**Technical quality dashboard:**
+
+| Metric | Target | Measurement |
+|---|---|---|
+| LCP (Largest Contentful Paint) | < 2.5s (p75) | `web-vitals` library → analytics |
+| CLS (Cumulative Layout Shift) | < 0.1 (p75) | `web-vitals` library → analytics |
+| INP (Interaction to Next Paint) | < 200ms (p75) | `web-vitals` library → analytics |
+| Initial bundle size | < 200KB gzipped | CI budget check |
+| Lighthouse a11y score | > 95 | Lighthouse CI per release |
+| axe-core violations | 0 critical, 0 serious | CI gate |
+| Test coverage (business logic) | > 80% | CI coverage report |
+
+**Adoption metrics:**
+
+| Metric | Target (12 months) | Measurement |
+|---|---|---|
+| Teams using design system | 100% of active teams | Package download stats from Artifactory |
+| New features following reference patterns | > 80% | Architecture review sampling |
+| Design system contributions from feature teams | > 5 per quarter | PR count to design system repo |
+| ADRs written for significant decisions | 100% | Repo audit |
+
+**Developer experience metrics:**
+
+| Metric | Target | Measurement |
+|---|---|---|
+| CI pipeline duration | < 10 min for affected builds | CI analytics |
+| Local build time | < 30s for incremental | Developer survey |
+| New engineer onboarding time | < 2 weeks to first PR | Onboarding tracking |
+| Developer satisfaction | > 4/5 | Quarterly survey |
+
+**Business impact metrics:**
+
+| Metric | Target | Measurement |
+|---|---|---|
+| Time-to-market for new features | 20% reduction | Sprint velocity tracking |
+| Frontend production bugs | 30% reduction | Jira bug tracking |
+| Customer-reported UI issues | 25% reduction | Support ticket analysis |
+
+---
+
+## Q50. What questions would you ask the hiring team to evaluate whether this role is the right fit?
+
+### Key Talking Points
+- **Current state**: What's the existing frontend landscape? How many frameworks, how much tech debt?
+- **Authority**: Does the architect have decision-making authority, or is it purely advisory?
+- **Team structure**: How many frontend engineers? How are teams organised? Is there a platform team?
+- **Design maturity**: Is there a design team? How do they work with engineering today?
+- **Budget**: Is there budget for tooling (Chromatic, BrowserStack, Storybook Enterprise)?
+- **Migration appetite**: Is leadership committed to a multi-year migration, or expecting quick wins?
+- **Success criteria**: How will my success be measured in 6 and 12 months?
+
+### Detailed Answer
+
+These questions help you assess whether the organisation is ready for a Frontend Architect and whether you'll have the support to succeed.
+
+**Understanding the current state:**
+1. "What frontend frameworks are currently in use across the product suite? How many are there?"
+2. "What's the current state of the design system? Is there one, or are teams building UI independently?"
+3. "What's the biggest frontend pain point that teams face today?"
+4. "How much technical debt exists in the frontend codebase? Is there appetite to address it?"
+
+**Understanding the role's authority:**
+5. "Does this role have decision-making authority on technology choices, or is it advisory?"
+6. "Who are the key stakeholders I'd need to align with for architectural decisions?"
+7. "How are architectural decisions made today? Is there an RFC process?"
+
+**Understanding the team:**
+8. "How many frontend engineers are there across all teams? What's the seniority distribution?"
+9. "Is there an existing platform/infrastructure team, or would I be building one?"
+10. "How do teams currently share code and patterns? Is there a monorepo or polyrepo setup?"
+
+**Understanding design collaboration:**
+11. "Is there an internal design team, or is design outsourced?"
+12. "How do designers and engineers collaborate today? Is there a handoff process?"
+13. "Are there existing design tokens or a Figma component library?"
+
+**Understanding expectations:**
+14. "What does success look like at 6 months and 12 months?"
+15. "Is the expectation to build consensus and influence, or to make top-down decisions?"
+16. "What's the budget for frontend tooling and infrastructure?"
+17. "Is leadership committed to a multi-year frontend modernisation effort, or expecting quick wins?"
+
+These questions also demonstrate to the hiring team that you think strategically about organisational context, not just technology.
+
+---
+
 *Prepared for IRIS Software Group UK — Frontend Architect Role*
+*Covers: Architecture, React/Angular, JavaScript, Performance, Testing, System Design, Mobile Strategy, Design System Leadership, Accessibility, API Design, SSR/Hydration, .NET Integration, Team Enablement, and Strategic Planning*
+*References: Fero Design System (Angular, 80+ components, Nx monorepo), Flare Design System (React, 15 packages, Lerna+Nx), FeroUI (Enterprise Angular SPA, fork-based monorepo)*
