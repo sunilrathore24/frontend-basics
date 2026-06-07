@@ -858,4 +858,482 @@ Shell's CI Pipeline:
 
 ---
 
-*Good luck tomorrow. Lead with trade-offs, not tools. Every answer should have a "the cost of this choice was..." clause. IBM hires architects who think in trade-offs, not prescriptions.*
+## 🧠 Tab 8: Interviewer Profile & 10 More Questions (System Design + Missed Topics)
+
+### Interviewer: Prathap Simha — Application Architect, IBM (9+ years)
+
+**Profile analysis:**
+
+| Aspect | Detail | What This Means for You |
+|---|---|---|
+| **Role** | Application Architect at IBM since April 2017 (9+ years) | He's deeply embedded in IBM's architecture practices — will ask real-world IBM patterns |
+| **Certifications** | Azure Solutions Architect Expert, Azure Fundamentals | He thinks in cloud-native terms — expect questions about cloud architecture, hybrid cloud, scalability |
+| **Previous** | Tech Lead at Tech Mahindra (5 years) | Understands enterprise delivery, outsourcing dynamics, team coordination |
+| **Background** | Commerce degree, not CS | He likely values clear communication over academic jargon. Explain things simply. |
+| **Experience** | 17+ years total, majority at IBM | He has seen IBM's evolution — will value practical experience over theoretical knowledge |
+
+**How to tailor your answers for Prathap:**
+
+1. **Speak in cloud-native terms** — he has Azure certifications, so frame your architecture with cloud concepts (CDN, auto-scaling, containerisation, CI/CD pipelines)
+2. **Don't over-academicise** — he's Commerce background turned architect. He values clarity and practical outcomes over theoretical depth
+3. **Show enterprise maturity** — he's been an application architect for 9 years. He'll spot surface-level answers. Show you've lived with the consequences of your decisions
+4. **Respect his domain** — "Application Architect" at IBM typically means he designs end-to-end application architectures (frontend + backend + infrastructure). Expect full-stack thinking questions, not pure frontend niche questions
+5. **Azure/cloud framing** — when discussing infrastructure (CDN, caching, deployment), mention cloud-native patterns. He'll connect with that
+
+---
+
+### 5 Frontend System Design Questions
+
+---
+
+#### SD1. "Design a real-time collaborative dashboard where multiple users see the same live data with zero-lag updates"
+
+**Framework for answering (5-step system design approach):**
+
+**Step 1 — Clarify requirements:**
+- How many concurrent viewers? (10? 1000? 100,000?)
+- Is it read-only live data (stock ticker) or collaborative editing (Google Docs)?
+- What's the acceptable lag? (sub-second? 5 seconds?)
+- What happens if connection drops?
+
+**Step 2 — High-level architecture:**
+
+```
+┌─────────────┐     WebSocket/SSE      ┌──────────────┐
+│  Browser    │◄───────────────────────►│  WS Gateway  │
+│  (React/    │                         │  (load        │
+│   Angular)  │                         │   balanced)   │
+└──────┬──────┘                         └──────┬───────┘
+       │                                       │
+       │ Local state                           │ Pub/Sub
+       │ (optimistic UI)                       │ (Redis/Kafka)
+       ▼                                       ▼
+┌──────────────┐                        ┌──────────────┐
+│ Virtual DOM  │                        │  Data Service│
+│ + diffing    │                        │  (source of  │
+│              │                        │   truth)     │
+└──────────────┘                        └──────────────┘
+```
+
+**Step 3 — Key decisions:**
+
+| Decision | Choice | Trade-off |
+|---|---|---|
+| Transport | WebSocket for bidirectional, SSE for server-push only | WS is more complex but supports collaboration; SSE simpler for read-only |
+| State sync | Server pushes deltas (not full state) | Reduces bandwidth but requires client-side merge logic |
+| Reconnection | Exponential backoff with jitter | Prevents thundering herd when server recovers |
+| Stale data | Show last-known-good + "updating..." indicator | Never show blank screen; always show something useful |
+| Scaling | Redis Pub/Sub fans out to multiple WS server instances | Single WS server can handle ~10K connections; beyond that, need horizontal scaling |
+
+**Step 4 — Frontend specifics:**
+- **Virtual scrolling** for large datasets (TanStack Virtual) — render only visible rows
+- **RequestAnimationFrame** for batching DOM updates from rapid WebSocket messages
+- **Web Worker** for processing incoming data off the main thread
+- **Optimistic UI** for collaborative actions — show instantly, reconcile with server
+
+**Step 5 — Failure modes:**
+- WS disconnects → fall back to polling every 5s → show "reconnecting" banner
+- Server overwhelmed → client-side throttle (accept max 10 updates/second, drop intermediate ones)
+- Network partition → show stale data with timestamp: "Last updated 30s ago"
+
+---
+
+#### SD2. "Design a search autocomplete system for an enterprise application with millions of records"
+
+**Requirements clarification:**
+- Source: API-backed (not client-side filtering)
+- Latency target: results in < 200ms
+- Scale: 1M+ searchable records (employees, documents, products)
+
+**Architecture:**
+
+```
+User types → Debounce (300ms) → AbortController (cancel previous)
+  → Check LRU cache → cache hit? return immediately
+  → cache miss? → fetch('/api/search?q=...')
+  → Server: trie/elasticsearch → top 10 results
+  → Client: render with highlighted matching text
+```
+
+**Key implementation details:**
+
+```typescript
+// 1. Debounce — don't fire on every keystroke
+const debouncedSearch = debounce(query => fetchResults(query), 300);
+
+// 2. AbortController — cancel stale requests
+let controller: AbortController;
+async function fetchResults(query: string) {
+  controller?.abort(); // cancel previous
+  controller = new AbortController();
+  
+  const cached = lruCache.get(query);
+  if (cached) return cached;
+  
+  const res = await fetch(`/api/search?q=${query}`, { signal: controller.signal });
+  const data = await res.json();
+  lruCache.set(query, data);
+  return data;
+}
+
+// 3. LRU cache — bounded memory (max 100 entries)
+// Prevents redundant API calls for repeated queries
+
+// 4. Minimum characters — don't search on 1 character (too broad)
+if (query.length < 2) return;
+```
+
+**Accessibility (critical for IBM):**
+```html
+<input role="combobox" aria-expanded="true" aria-controls="results"
+       aria-activedescendant="result-2" />
+<ul id="results" role="listbox">
+  <li id="result-0" role="option">Angular Architecture</li>
+  <li id="result-1" role="option">Angular CDK</li>
+  <li id="result-2" role="option" aria-selected="true">Angular Testing</li>
+</ul>
+```
+
+**Keyboard navigation:** Arrow keys move highlight, Enter selects, Escape closes dropdown.
+
+---
+
+#### SD3. "Design a notification system — in-app toasts, badge counts, push notifications, and real-time updates"
+
+**Architecture layers:**
+
+```
+Layer 1: Transport
+├── WebSocket (persistent connection for real-time push)
+├── SSE (fallback if WebSocket blocked by corporate proxy)
+└── Polling (last resort — every 30s check /api/notifications/unread)
+
+Layer 2: Client State
+├── Notification store (unread count, notification list)
+├── Toast queue (max 3 visible, FIFO with assertive priority jump)
+└── Badge count (derived from unread list)
+
+Layer 3: UI Components
+├── Toast container (positioned fixed, stacked)
+├── Notification bell (badge with count)
+├── Notification center (flyout panel with history)
+└── Push notification (OS-level via Service Worker)
+```
+
+**Toast system design:**
+- Max 3 visible simultaneously
+- Auto-dismiss after 5s (configurable)
+- "Assertive" toasts (errors) jump to front of queue
+- Pause timer on hover (user is reading)
+- Screen reader: `role="alert"` for errors, `role="status"` for info
+
+**Real-time architecture (from Flare LiveAnnouncerProvider pattern):**
+```typescript
+const announce = (text: string, politeness: 'polite' | 'assertive') => {
+  const newItem = { id: Date.now(), text, politeness };
+  setQueue(current => {
+    if (politeness === 'assertive') return [newItem, ...current]; // front
+    return [...current, newItem]; // back
+  });
+};
+```
+
+---
+
+#### SD4. "Design a multi-step form wizard with validation, save-as-draft, and resume capability"
+
+**Requirements:**
+- 5+ steps (personal info → education → employment → documents → review)
+- Validate each step before proceeding
+- Save progress (user can leave and resume later)
+- Works offline (draft saved locally)
+
+**Architecture:**
+
+```typescript
+// State machine approach — each step is a state
+type WizardState = 'personal' | 'education' | 'employment' | 'documents' | 'review';
+
+interface WizardContext {
+  currentStep: WizardState;
+  completedSteps: Set<WizardState>;
+  formData: Record<WizardState, Record<string, any>>;
+  isDirty: boolean;
+  lastSavedAt: Date | null;
+}
+```
+
+**Key decisions:**
+
+| Concern | Solution | Why |
+|---|---|---|
+| Form state | react-hook-form with FormProvider / Angular Reactive Forms | Built-in validation, performance (doesn't re-render on every keystroke) |
+| Persistence | Auto-save to IndexedDB every 30s + on step change | Survives browser crash, tab close |
+| Server sync | Debounced PUT to /api/drafts/{id} every 60s | Enables resume on different device |
+| Validation | Per-step schema (Zod/Yup) — validate only current step, not entire form | Don't block user on step 1 for step 5 validation |
+| Navigation | Allow back to completed steps, block forward to uncompleted | Linear progression with ability to review |
+| Offline | Service Worker queues draft saves when offline | Sync when back online |
+
+**UX patterns:**
+- Progress indicator showing completed/current/remaining steps
+- "Save & Exit" button — saves current state, user can resume later
+- "Discard Draft" with confirmation dialog
+- Unsaved changes warning on browser close (`beforeunload`)
+- Step summary on the review page with "Edit" links back to each step
+
+---
+
+#### SD5. "Design a data-heavy dashboard with multiple widgets that load independently, can be rearranged, and support different refresh rates"
+
+**Requirements:**
+- 6-8 widgets on a dashboard (charts, tables, KPI cards, activity feed)
+- Each widget fetches its own data independently
+- Users can rearrange widgets (drag-and-drop)
+- Different widgets refresh at different intervals (KPIs every 10s, charts every 60s)
+- One widget failing shouldn't crash others
+
+**Architecture:**
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Dashboard Shell (layout grid + DnD context)                 │
+│                                                              │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐   │
+│  │ Widget A │  │ Widget B │  │ Widget C │  │ Widget D │   │
+│  │ KPI Card │  │ Chart    │  │ Table    │  │ Feed     │   │
+│  │ 10s poll │  │ 60s poll │  │ on-demand│  │ WebSocket│   │
+│  │          │  │          │  │          │  │          │   │
+│  │ [Error   │  │ [Error   │  │ [Error   │  │ [Error   │   │
+│  │  Boundary]│  │  Boundary]│  │  Boundary]│  │  Boundary]│   │
+│  └──────────┘  └──────────┘  └──────────┘  └──────────┘   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Key patterns:**
+
+1. **Error boundaries per widget** — Widget C throws? Show "Failed to load" in that slot, other widgets continue working. Exactly like MFE remote isolation.
+
+2. **Independent data fetching:**
+```typescript
+// Each widget manages its own polling interval
+const { data } = useQuery({
+  queryKey: ['kpi-revenue'],
+  queryFn: fetchRevenue,
+  refetchInterval: 10_000, // 10s for KPIs
+});
+
+const { data: chartData } = useQuery({
+  queryKey: ['monthly-chart'],
+  queryFn: fetchChartData,
+  refetchInterval: 60_000, // 60s for charts
+});
+```
+
+3. **Drag-and-drop layout** — persist layout to backend per user. Use CSS Grid + DnD Kit. Layout config is JSON: `[{ widgetId: 'kpi', x: 0, y: 0, w: 3, h: 2 }]`
+
+4. **Skeleton loaders per widget** — show the grid immediately with skeleton placeholders. Each widget renders its skeleton independently, then replaces with real content.
+
+5. **Lazy loading** — heavy widgets (charts with D3, large tables) use `React.lazy` / `@defer` so they don't block initial render.
+
+---
+
+### 5 Questions on Missed Topics (Tailored to Prathap's Profile)
+
+---
+
+#### MT1. "How do you approach cloud-native frontend deployment? Walk me through your CI/CD pipeline for frontend artefacts."
+
+**Why Prathap asks this:** He has Azure certifications. He thinks in cloud-native terms — containers, CDN, pipelines, blue/green deployments.
+
+**Your answer:**
+
+> "In both Fero and Flare, we use containerised CI pipelines:
+
+> **Fero pipeline (TeamCity):**
+> ```
+> Docker container: lerna-worker (Node 24 Alpine)
+> ┌─────────────────────────────────────────────┐
+> │ 1. yarn install --frozen-lockfile            │
+> │ 2. Lint (ESLint TS + Stylelint SCSS)        │
+> │ 3. Unit tests (Karma/Jasmine)               │
+> │ 4. A11y tests (dedicated step)              │
+> │ 5. Production build (ng-packagr APF)        │
+> │ 6. RTL stylesheet generation (PostCSS)      │
+> │ 7. Publish 15 packages to Artifactory       │
+> └─────────────────────────────────────────────┘
+> ```
+
+> **Flare pipeline (PipelineKit/Jenkins):**
+> ```
+> Docker container: Node 24 Alpine + Playwright Noble
+> ┌─────────────────────────────────────────────┐
+> │ 1. affected:lint:ci (only changed packages) │
+> │ 2. affected:test:ci (Jest + typecheck)      │
+> │ 3. build:ci:parallel (Lerna parallel)       │
+> │ 4. test:storybook:ci (visual + a11y)        │
+> │ 5. Publish to Artifactory registry          │
+> │ 6. Deploy Storybook docs to S3              │
+> └─────────────────────────────────────────────┘
+> ```
+
+> **Cloud-native deployment patterns I'd use at IBM:**
+> - **Static assets → CDN** (CloudFront/Azure CDN) with content-hashed filenames and immutable cache headers
+> - **Blue/green deployment** — new version deployed alongside old, traffic switched after health check passes
+> - **Canary releases** — 5% of traffic to new version, monitor error rates, roll forward or back
+> - **Infrastructure as Code** — CDN config, S3 buckets, CloudFront distributions all in Terraform/CDK
+> - **Container-based CI** — reproducible builds, no "works on my machine" issues"
+
+---
+
+#### MT2. "How do you handle technical debt in a long-lived enterprise application? How do you sell it to product leadership?"
+
+**Why Prathap asks this:** He's been at IBM for 9 years. He has lived with technical debt. He wants to know if you manage it strategically.
+
+**Your answer:**
+
+> "Technical debt is not inherently bad — it's a deliberate trade-off. The problem is *untracked, unmanaged* debt.
+
+> **My framework:**
+> 1. **Make debt visible** — tag TODO comments with ticket links. Maintain a "tech debt backlog" as first-class items, not hidden in Jira descriptions.
+> 2. **Categorise by impact:**
+>    - P1: Security risk (XSS, exposed PII) — fix NOW
+>    - P2: Blocks other teams (shared component bug) — next sprint
+>    - P3: Slows velocity (outdated test framework) — quarterly
+>    - P4: Cosmetic (old naming conventions) — boy scout rule
+> 3. **20% rule** — every sprint, 20% capacity goes to debt reduction. Non-negotiable.
+> 4. **Boy Scout Rule** — leave code better than you found it. Touching a file? Fix the lint warnings.
+
+> **How to sell to leadership:**
+> Frame it as *velocity investment*, not cleanup:
+> - "If we spend 2 sprints on this, we'll ship features 30% faster for the next 6 months"
+> - Track metrics: build time (was 45min, now 8min after MFE split), test execution time, time-to-first-PR for new hires
+> - Never say "we need to refactor." Say "this investment will reduce our incident rate from 3/month to 0."
+
+> **Real example:** In Fero, we carried three forked vendor libraries (ng-sidebar, ngx-perfect-scrollbar, ngx-popper) for years because upgrading Angular was blocked by them. The strategic fix wasn't upgrading the forks — it was replacing them with CDK-based alternatives. That eliminated the external dependency entirely and unblocked all future Angular upgrades."
+
+---
+
+#### MT3. "How do you ensure consistency when multiple teams contribute to the same frontend platform?"
+
+**Why Prathap asks this:** At IBM, dozens of teams work on products. Consistency at scale is an architect's primary challenge.
+
+**Your answer:**
+
+> "Consistency comes from three sources: automation, tooling, and culture. In that order of reliability.
+
+> **1. Automation (can't be bypassed):**
+> - Shared ESLint config as an npm package — all teams extend it, all rules enforced in CI
+> - Nx module boundary rules — lint prevents payroll code from importing HR code
+> - Bundle size budgets — CI fails if initial bundle exceeds threshold
+> - Pre-commit hooks (Husky + lint-staged) — formatting and related tests run before commit lands
+> - In Fero: `@fero/eslint-plugin` with custom template-a11y rules enforced as errors
+
+> **2. Tooling (makes the right thing easy):**
+> - Code generators — `yarn add:component` scaffolds correct file structure, barrel exports, test boilerplate
+> - Reference implementation — a working app that demonstrates every pattern (not a slide deck)
+> - Storybook as the living style guide — designers and engineers reference the same source of truth
+
+> **3. Culture (reinforces the first two):**
+> - Architecture Decision Records (ADRs) — every significant decision documented with "why"
+> - PR reviews as teaching moments — "here's *why* this pattern is preferred"
+> - Architecture guild meetings (bi-weekly) — cross-team alignment on upcoming changes
+> - Inner-source contribution model — feature teams contribute to shared platform, platform team reviews
+
+> **The principle: make the right thing the easy thing.** If following the standard is harder than going rogue, teams will go rogue. The generators, lint rules, and shared configs ensure the default path is the correct path."
+
+---
+
+#### MT4. "What's your approach to evaluating and adopting new technologies? How do you prevent 'shiny object syndrome'?"
+
+**Why Prathap asks this:** 9 years at IBM means he's seen many tech hype cycles. He wants to know you're pragmatic, not trendy.
+
+**Your answer:**
+
+> "I use a decision framework that filters new tech through four gates:
+
+> **Gate 1: Does it solve a real problem we have today?**
+> Not "could we theoretically benefit" — but "do we have a documented pain point this addresses?" If not, it goes on the 'watch' list.
+
+> **Gate 2: Is the ecosystem mature enough for enterprise?**
+> - LTS/support policy? (Angular: LTS for 18 months. React: no formal LTS but Meta supports it)
+> - Security patch cadence?
+> - Can we hire people who know it? (check LinkedIn, job postings)
+> - Enterprise adoption? (IBM, Google, Meta use it — not just startups)
+
+> **Gate 3: What's the migration cost and reversibility?**
+> - One-way door (framework choice) → needs POC, team consensus, months of evaluation
+> - Two-way door (library swap, build tool) → try it, revert if it doesn't work, days
+
+> **Gate 4: Time-boxed proof of concept**
+> Build the same feature with the new tech AND the current tech. Compare: developer experience, bundle size, performance, testing ergonomics. The team that does the POC writes the trade-off document.
+
+> **Tech Radar approach:**
+> I maintain a simple four-quadrant tech radar:
+> - **Adopt** — use in production (proven: Angular, React, TypeScript, Nx)
+> - **Trial** — limited production use (evaluating: Angular Signals, Bun, Vite)
+> - **Assess** — POC only (watching: Qwik, React Server Components for our use case)
+> - **Hold** — don't adopt (deprecated: AngularJS, Webpack 4, Moment.js)
+
+> Updated quarterly with team input, published internally so everyone knows the direction."
+
+---
+
+#### MT5. "Describe your approach to making the frontend architecture horizontally scalable as the team grows from 5 to 50 engineers."
+
+**Why Prathap asks this:** IBM hires architects to build systems that scale with the organisation, not just with traffic.
+
+**Your answer:**
+
+> "Technical architecture must scale with the team, not just the product. I've lived this transition — from a single team on one repo to 10+ teams on a micro-frontend platform.
+
+> **At 5 engineers (one team):**
+> - Well-structured monolith is fine — feature-based folder structure, shared component library
+> - One CI pipeline, one deployment, one codebase
+> - Convention over configuration — verbal agreements work at this scale
+
+> **At 15 engineers (2-3 teams):**
+> - Monorepo with Nx — shared tooling, but clear library boundaries
+> - Module boundary lint rules prevent cross-team coupling
+> - Shared design system as an internal package (not copy-paste)
+> - Code ownership files (CODEOWNERS) — teams own their directories
+
+> **At 30+ engineers (5+ teams):**
+> - Micro-frontends become necessary — teams need deployment independence
+> - Module Federation shell + remotes — each team deploys independently
+> - Shared contracts (TypeScript interfaces package) — integration points are versioned
+> - Platform team owns shell, design system, auth, CI infrastructure
+> - Feature teams own their remotes end-to-end (build, test, deploy, monitor)
+> - Inner-source model for shared code — PRs reviewed by platform team
+
+> **At 50+ engineers (10+ teams):**
+> - Architecture guild for cross-team alignment
+> - RFC process for significant changes
+> - Automated dependency update PRs (like FeroUI's BitBot for Fero uptakes)
+> - Per-team CI pipelines, per-team deployment cadence
+> - Shared observability (error rates, performance budgets per team)
+> - Tech radar maintained collaboratively
+
+> **The key insight from FeroUI:** We went from a fork-per-team model (16 forks!) to Module Federation. The fork model gave autonomy but made integration painful. MFE gives the same autonomy with runtime integration — no merge conflicts, no coordinated releases.
+
+> **What stays constant at every scale:**
+> - Design tokens as the visual contract
+> - Automated quality gates (lint, test, a11y, bundle budget)
+> - ADRs for significant decisions
+> - The design system grows WITH the teams, not ahead of them"
+
+---
+
+### Interviewer-Specific Tips for Prathap
+
+| Signal | How to Respond |
+|---|---|
+| He asks about Azure/cloud | Frame your answers with cloud deployment patterns (CDN, containers, pipelines, blue/green) |
+| He asks about end-to-end architecture | Don't stay purely frontend — show you understand API contracts, auth flows, caching layers |
+| He asks "how would you" | Give a structured approach (step 1, 2, 3), not just the final answer — he's evaluating your thinking process |
+| He probes on team coordination | Reference the fork-per-team model in FeroUI and how MFE solved the coordination problem |
+| He asks about IBM-specific tech | Mention Carbon Design System, watsonx, hybrid cloud — show you've done homework on IBM's ecosystem |
+| He goes deep on one topic | Don't rush. He has 9 years of architect experience — he'll probe until he finds your depth limit. Go deep where you're strong. |
+
+---
+
+*Good luck tomorrow. Prathap is a seasoned architect — he'll respect depth over breadth. Pick 2-3 areas where you can go deepest (MFE, design systems, security) and steer the conversation there. If he asks something you don't know, say "I haven't implemented that, but here's how I'd evaluate it" — architects who admit gaps are more credible than those who bluff.*
