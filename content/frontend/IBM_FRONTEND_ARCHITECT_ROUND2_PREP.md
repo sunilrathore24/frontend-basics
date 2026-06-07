@@ -601,4 +601,261 @@ Shell's CI Pipeline:
 
 ---
 
+## 🔥 Tab 7: 10 IBM-Specific Architect Questions (From Glassdoor/Interview Research)
+
+> Based on web research across Glassdoor, Dataford, InterviewQuery, and frontend system design interview platforms — these are the types of questions IBM asks at the architect level, particularly for frontend/solutions architect roles.
+
+---
+
+### Q1. "Design a solution to migrate an on-premise legacy system to the cloud while minimizing downtime."
+
+**Why IBM asks this:** IBM's core business is modernisation. They help enterprises move from legacy systems to hybrid cloud (Red Hat OpenShift, IBM Cloud). This tests your migration thinking.
+
+**Your answer (framed with Fero/FeroUI):**
+
+> "I've done this. FeroUI migrated from a monolithic Angular application to a Module Federation micro-frontend architecture — that's essentially the same pattern as legacy-to-cloud, but on the frontend. The approach is Strangler Fig: route traffic to the new system feature by feature, never a big-bang cutover.
+
+> **Phase 1:** Run old and new side by side. The shell decides which remote to load based on URL context. No user-facing disruption — they hit the same domain.
+
+> **Phase 2:** Migrate domain by domain, ordered by business value × risk. Low-risk, high-visibility features first (read-only views), then data-entry flows, then admin features last.
+
+> **Phase 3:** Feature flags control which users see old vs new. Canary rollout: 5% → 25% → 100%. Instant rollback by flipping the flag.
+
+> **Zero downtime:** Both systems share the same auth (session cookies on same domain). The proxy/shell routes requests transparently. Users never know they crossed from legacy to new."
+
+---
+
+### Q2. "How do you handle security authentication and authorization in a distributed system?"
+
+**Why IBM asks this:** IBM builds distributed enterprise systems with strict security requirements (banking, healthcare, government). They need architects who treat auth as a first-class concern.
+
+**Your answer:**
+
+> "Auth must be centralised — never distributed across micro-frontends. In FeroUI, the shell owns the entire auth lifecycle:
+
+> 1. **Authentication:** Server-side sessions with HttpOnly cookies. No tokens in JavaScript (prevents XSS from stealing credentials). CSRF nonce pattern for mutation protection.
+
+> 2. **Authorization (RBAC):** Permissions loaded once at login into NgRx store. Route guards prevent navigation to unauthorized routes. Structural directives hide UI elements (`*hasPermission='payroll:approve'`). Critical rule: UI hiding is cosmetic — the server enforces every permission check.
+
+> 3. **Distributed propagation:** All micro-frontend remotes inherit auth via three mechanisms: shared HttpClient (same interceptor chain), shared NgRx store (same user state), and same-domain cookies (automatic attachment).
+
+> 4. **SSO integration:** OIDC flow with SameSite=Lax cookies + CSRF tokens. The identity provider handles the redirect flow server-side — the frontend never directly interacts with the IdP.
+
+> The principle: **the shell centralises auth; remotes are auth-consumers, never auth-producers.**"
+
+---
+
+### Q3. "What factors do you consider when choosing between a synchronous and asynchronous integration pattern?"
+
+**Why IBM asks this:** IBM Consulting architects design integration patterns for enterprise clients daily. This tests your trade-off thinking.
+
+**Your answer:**
+
+| Factor | Synchronous (REST/GraphQL) | Asynchronous (WebSocket/SSE/Queue) |
+|---|---|---|
+| User expects immediate response | ✅ Form submit, CRUD | ❌ Too slow for polling-based |
+| Long-running operation | ❌ Blocks the user, timeout risk | ✅ Submit and poll/push status |
+| Real-time updates needed | ❌ Polling is wasteful | ✅ WebSocket/SSE push |
+| Coupling tolerance | Tight (request-response) | Loose (fire-and-forget) |
+| Error handling | Simple (HTTP status codes) | Complex (retry queues, dead letter) |
+| Frontend UX | Loading spinner → result | Optimistic UI → confirmation |
+
+> "In FeroUI, we use synchronous REST for CRUD operations (create employee, submit leave request) and SignalR/WebSocket for real-time notifications (payroll run progress, leave approval alerts). In Flare, the AI Assist feature uses Server-Sent Events for streaming LLM responses — async because tokens arrive over 5-10 seconds, and we render them progressively.
+
+> **My decision framework:** If the user is waiting and the operation takes < 2 seconds, synchronous. If it's > 2 seconds or the user doesn't need to wait, asynchronous with status polling or push notification."
+
+---
+
+### Q4. "Tell me about a time you had to say 'no' to a technical request from a stakeholder. How did you handle it?"
+
+**Why IBM asks this:** IBM Solutions Architects are client-facing. They need architects who push back constructively, not cave to bad decisions or alienate clients.
+
+**Your answer (STAR format):**
+
+> **Situation:** A product team wanted to store payroll calculation results in localStorage for "offline access" so accountants could view payslips without network connectivity.
+
+> **Task:** Evaluate the request against security requirements and propose an alternative.
+
+> **Action:** I didn't say "no" outright. I said "let me show you the risk." I demonstrated that localStorage is accessible to any XSS attack — a single cross-site scripting vulnerability would expose every employee's salary data to an attacker. I then proposed an alternative: Service Worker cache with a memory-only backend for sensitive data (cleared on logout), and localStorage only for non-PII preferences (theme, language, last-viewed page).
+
+> **Result:** The team adopted the Service Worker approach. They got the offline capability they wanted without the PII exposure risk. The key was showing the *alternative*, not just the problem. Saying "no" without an alternative is unhelpful; saying "no, but here's a better path" is leadership."
+
+---
+
+### Q5. "How would you architect a system that needs to handle a sudden 10x spike in traffic?"
+
+**Why IBM asks this:** IBM builds systems for enterprises that experience traffic spikes (Black Friday for retail, tax deadline for payroll, open enrollment for HR).
+
+**Your answer (frontend-focused):**
+
+> "On the frontend, handling 10x traffic is about reducing server load and staying responsive:
+
+> 1. **CDN everything static** — HTML shell, JS bundles, CSS, images, fonts all served from edge CDN (CloudFront). The origin server never sees static asset requests. Content-hashed filenames with `Cache-Control: immutable, max-age=31536000`.
+
+> 2. **API response caching** — stale-while-revalidate pattern for non-critical data. During a spike, serve slightly stale data rather than hammering the backend. In Fero, the `TrqCacheInterceptor` caches API responses with configurable TTLs per URL pattern.
+
+> 3. **HTTP request deduplication** — Fero's `TrqInFlightInterceptor` ensures that if 1000 users request the same endpoint simultaneously, only one HTTP call is made and all 1000 get the same shared response via RxJS `share()`.
+
+> 4. **Graceful degradation** — if the API is overwhelmed (429/503), show cached data with a "data may be outdated" banner. Don't show error screens; show the last-known-good state.
+
+> 5. **Code splitting** — only load the code for the route the user is on. Don't pre-load all 50 feature modules on login. Initial bundle < 170KB, features lazy-loaded on navigation.
+
+> 6. **Rate limiting on the client** — debounce search inputs, throttle scroll handlers, prevent double-submit on forms. Reduce outbound requests at source."
+
+---
+
+### Q6. "How do you explain a complex technical failure or architectural risk to a non-technical executive?"
+
+**Why IBM asks this:** IBM Architects present to C-level executives. This tests communication skill, not just technical depth.
+
+**Your answer:**
+
+> "I use analogies and business impact, never jargon.
+
+> **Example:** When I needed to explain why our micro-frontend architecture needed a version compatibility enforcement system, I told the VP: 'Imagine each team builds a floor of a building independently. Without a shared building code, Team A's plumbing doesn't connect to Team B's pipes. Our version pinning is the building code — it ensures all floors can connect.'
+
+> **Structure I follow:**
+> 1. **What's the business risk?** (not the technical detail) — "If we don't fix this, customers will see errors during payroll processing"
+> 2. **What's the cause?** (one sentence, no jargon) — "Two teams deployed incompatible versions at the same time"
+> 3. **What's the fix?** (concrete action) — "We're adding an automated check that prevents incompatible deployments"
+> 4. **What's the cost of the fix?** (time/money) — "Two sprint investment, zero ongoing cost"
+> 5. **What happens if we don't fix it?** (business consequence) — "This will recur monthly and each incident costs 4 hours of engineering time"
+
+> Numbers and business impact, not technical jargon."
+
+---
+
+### Q7. "Design a frontend observability strategy — how do you know when something is wrong in production before users report it?"
+
+**Why IBM asks this:** IBM products (Instana, Turbonomic) ARE observability tools. They expect architects to think about frontend observability as a first-class concern.
+
+**Your answer:**
+
+> "I implement three pillars of frontend observability:
+
+> **Pillar 1: Error Monitoring (Sentry/Datadog RUM)**
+> - Global error handler catches unhandled exceptions and promise rejections
+> - Source maps uploaded to monitoring platform (never served publicly)
+> - Structured context: user ID, tenant, route, component tree, session ID
+> - Alert on error *rate* spikes, not individual errors (reduces noise)
+> - In Flare: dual-adapter logging (Splunk + Console simultaneously)
+
+> **Pillar 2: Performance Monitoring (Real User Monitoring)**
+> - `web-vitals` library reports LCP, INP, CLS from real users
+> - Custom performance marks for critical flows: login → dashboard ready, payroll submit → confirmation
+> - p75 targets (not averages — averages hide the tail)
+> - Alerting: if p75 LCP exceeds 2.5s for 10 minutes → page the on-call
+
+> **Pillar 3: Business Flow Monitoring**
+> - Track critical user journeys as funnels: start payroll → add employees → calculate → submit → confirm
+> - Drop-off at any step triggers investigation
+> - Correlation IDs on every request (`X-Correlation-ID` header) — trace a user's session from frontend to backend to database
+
+> The key insight: **don't wait for users to report issues. Detect anomalies in error rates, performance metrics, and funnel drop-offs automatically.** By the time a user reports a bug, hundreds have already experienced it silently."
+
+---
+
+### Q8. "How would you implement a feature flag system for progressive rollout of a major UI change?"
+
+**Why IBM asks this:** IBM ships to 100,000+ customers. You can't deploy a major change to everyone simultaneously. They need architects who think in gradual rollout.
+
+**Your answer:**
+
+> "In Fero, we built a feature toggle system with three layers:
+
+> **1. Toggle service with evaluation logic:**
+> ```typescript
+> // Supports AND/OR operators and negation
+> featureToggleService.validate('new-dashboard')           // simple boolean
+> featureToggleService.validate(['feature.a', 'feature.b'], AND)  // all must be true
+> featureToggleService.validate('!legacy-mode')            // negation
+> ```
+
+> **2. Route-level guard:**
+> ```typescript
+> {
+>   path: 'new-dashboard',
+>   canActivate: [TrqFeatureToggleRouteGuard],
+>   data: {
+>     featureToggle: 'new-dashboard',
+>     redirectTo: '/legacy-dashboard'  // graceful fallback
+>   }
+> }
+> ```
+
+> **3. Template-level directive:**
+> ```html
+> <div *featureToggle="'new-dashboard'">
+>   <new-dashboard-widget />
+> </div>
+> ```
+
+> **Progressive rollout strategy:**
+> - Day 1: internal users only (feature flag: `role === 'internal'`)
+> - Day 3: 5% canary (hash(userId) % 100 < 5)
+> - Day 7: 25% (if error rates stable)
+> - Day 14: 50% → 75% → 100%
+> - Kill switch: flip the flag, instant rollback without deployment
+
+> **Key principle:** Feature flags have an *expiration date*. After full rollout, the flag is removed. Dead flags are tech debt."
+
+---
+
+### Q9. "How do you approach building for internationalisation in a product that serves 135+ countries?"
+
+**Why IBM asks this:** IBM operates in 175+ countries. i18n is not optional — it's table stakes.
+
+**Your answer:**
+
+> "In Fero, I architected a runtime i18n system serving 6+ RTL locales and dozens of LTR locales. In Flare, we support 63 locales with CDN-loaded culture data. Key decisions:
+
+> **1. Runtime over build-time translations** — one build serves all locales. Translations fetched from API at startup, cached in memory. No per-locale builds.
+
+> **2. ICU message format for plurals and gender:**
+> ```
+> {count, plural, =0 {No employees} one {1 employee} other {{count} employees}}
+> ```
+> Different languages have different plural rules (English: 2, Arabic: 6, Japanese: 1). ICU handles this.
+
+> **3. RTL as a first-class concern** — in Fero, `TrqLocaleDirectionService` detects RTL locales (ar, fa, he, yi, ur) and sets `dir='rtl'` on `<html>`. PostCSS RTL plugin auto-generates mirrored stylesheets. CSS logical properties (`margin-inline-start`) everywhere.
+
+> **4. Culture-aware formatting** — NEVER format dates/numbers manually. Use `Intl.DateTimeFormat` and `Intl.NumberFormat`. In Flare, `@flare/globalization` loads culture data from CDN per-locale with fallback support.
+
+> **5. Text expansion** — German is 30% longer than English. UI MUST accommodate this. We test with pseudo-locales (extended strings) to catch truncation.
+
+> **6. Locale-aware caching** — in Fero, the cache key includes `Accept-Language` header. Switching locale automatically invalidates stale cached translations."
+
+---
+
+### Q10. "Describe a time when a project was going off track. What steps did you take to recover it?"
+
+**Why IBM asks this:** IBM places heavy emphasis on behavioral questions. This tests leadership under pressure — a core architect responsibility.
+
+**Your answer (STAR format):**
+
+> **Situation:** The Fero design system upgrade from Angular 14 to Angular 16 was scoped for one sprint (2 weeks). At day 8, we discovered that 3 of our forked vendor libraries (ng-sidebar, ngx-perfect-scrollbar, ngx-popper) had no Angular 16-compatible versions. The upgrade was blocked.
+
+> **Task:** Unblock the migration without slipping the quarterly release that depended on it.
+
+> **Action:** I took three steps immediately:
+> 1. **Reframed the problem** — presented to the team: "We don't need to upgrade the vendors. We need to remove the dependency on them." This changed the conversation from "wait for upstream" to "what's our internal solution?"
+> 2. **Parallel-tracked** — assigned one engineer to patch the existing forks with Angular 16 compatibility (short-term), while two engineers built lightweight replacements using Angular CDK primitives (long-term).
+> 3. **Reduced scope** — the patched forks shipped with the Angular 16 upgrade in sprint 2. The CDK replacements shipped in the following sprint. We split one large migration into two smaller, shippable increments.
+
+> **Result:** Angular 16 shipped on time with patched vendor forks. CDK replacements shipped the following sprint and eliminated three external dependencies permanently. The team learned: **big migrations need escape hatches for unexpected blockers. Plan for 80% smooth, budget time for the 20% surprises.**"
+
+---
+
+### Key Themes IBM Interviewers Evaluate (from research)
+
+| Evaluation Criteria | What They're Looking For | How to Signal It |
+|---|---|---|
+| **Technical Proficiency** | Deep expertise in system design, integration patterns, cloud architecture | Reference specific architecture decisions with trade-off reasoning |
+| **Client Focus** | Managing stakeholders, translating jargon, handling pushback | STAR stories where you said "no" constructively |
+| **Problem Solving** | Structured approach to ambiguity, methodology (Agile, IBM Garage) | Walk through your thinking process, not just the answer |
+| **Growth Mindset** | Curiosity, mentoring juniors, staying current with AI/GenAI | Mention how you've upskilled teams, adopted new tech |
+| **IBM Values** | "Be essential" — every contribution should matter | Frame answers in terms of business impact, not just technical correctness |
+
+---
+
 *Good luck tomorrow. Lead with trade-offs, not tools. Every answer should have a "the cost of this choice was..." clause. IBM hires architects who think in trade-offs, not prescriptions.*
