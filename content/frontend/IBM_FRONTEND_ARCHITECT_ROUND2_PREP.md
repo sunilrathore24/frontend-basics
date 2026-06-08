@@ -1781,4 +1781,456 @@ export const getPrimaryNavItems = createSelector(
 
 ---
 
+---
+
+## 📐 Tab 10: Generic Frontend System Design Framework (Applicable to Any UI Component/Feature)
+
+> Use this framework when asked "Design X" in the interview — whether it's a search bar, chat widget, dashboard, or form wizard. The steps are always the same.
+
+---
+
+### The 7-Step Framework
+
+```
+Step 1: CLARIFY REQUIREMENTS (2 min)
+Step 2: DEFINE SCOPE (1 min)
+Step 3: HIGH-LEVEL ARCHITECTURE (3 min)
+Step 4: COMPONENT BREAKDOWN (5 min)
+Step 5: DATA LAYER (5 min)
+Step 6: CROSS-CUTTING CONCERNS (5 min)
+Step 7: TRADE-OFFS & ALTERNATIVES (2 min)
+```
+
+---
+
+### Step 1: Clarify Requirements
+
+**Always ask these before designing:**
+
+| Category | Questions to Ask |
+|---|---|
+| **Users** | Who uses this? How many concurrent users? What devices? |
+| **Data** | How much data? Real-time or static? How often does it change? |
+| **Scale** | 100 items or 100,000 items? Single tenant or multi-tenant? |
+| **Performance** | What's the latency target? What's the initial load budget? |
+| **Offline** | Does it need to work without network? |
+| **Accessibility** | What WCAG level? Screen reader support required? |
+| **i18n** | Multiple languages? RTL support? |
+| **Integration** | REST API? GraphQL? WebSocket? Existing backend or greenfield? |
+
+**Example — "Design a data table component":**
+> "Before I design, let me clarify: How many rows? (100 vs 100K changes the approach entirely.) Is sorting/filtering server-side or client-side? Is it real-time or static? Does it need row selection, inline editing, or is it read-only?"
+
+---
+
+### Step 2: Define Scope (What's In / Out)
+
+**Draw a boundary:**
+
+```
+IN SCOPE (will design now):
+✅ Core component structure
+✅ Data fetching strategy
+✅ State management
+✅ Key interactions (sort, filter, paginate)
+✅ Accessibility basics
+
+OUT OF SCOPE (mention but don't deep-dive):
+❌ Backend API design (assume it exists)
+❌ Authentication (assume user is logged in)
+❌ Full responsive design (mention breakpoints, don't design all)
+❌ Edge cases (handle after core design is solid)
+```
+
+---
+
+### Step 3: High-Level Architecture
+
+**Always draw this diagram (adapt for any component):**
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  PRESENTATION LAYER (Components)                         │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
+│  │ Container    │  │ Presentational│  │ Shared UI    │  │
+│  │ (smart)      │  │ (dumb)        │  │ (design sys) │  │
+│  └──────┬───────┘  └──────────────┘  └──────────────┘  │
+│         │                                                │
+├─────────┼────────────────────────────────────────────────┤
+│  STATE LAYER                                             │
+│  ┌──────▼───────┐  ┌──────────────┐  ┌──────────────┐  │
+│  │ Local State  │  │ Server State │  │ URL State    │  │
+│  │ (useState/   │  │ (useQuery/   │  │ (query      │  │
+│  │  signal)     │  │  service)    │  │  params)     │  │
+│  └──────────────┘  └──────┬───────┘  └──────────────┘  │
+│                           │                              │
+├───────────────────────────┼──────────────────────────────┤
+│  DATA LAYER               │                              │
+│  ┌────────────────────────▼─────────────────────────┐   │
+│  │  API Client (fetch/axios/HttpClient)              │   │
+│  │  + Interceptors (auth, cache, retry, logging)     │   │
+│  └──────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────┘
+```
+
+---
+
+### Step 4: Component Breakdown
+
+**Apply this split to any feature:**
+
+```typescript
+// Container (smart) — handles data and logic
+function EmployeeListContainer() {
+  const { data, isLoading, error } = useQuery(['employees'], fetchEmployees);
+  const [filters, setFilters] = useState(defaultFilters);
+  
+  return (
+    <EmployeeListView 
+      employees={data}
+      isLoading={isLoading}
+      error={error}
+      filters={filters}
+      onFilterChange={setFilters}
+    />
+  );
+}
+
+// Presentational (dumb) — handles rendering only
+function EmployeeListView({ employees, isLoading, error, filters, onFilterChange }) {
+  if (isLoading) return <Skeleton />;
+  if (error) return <ErrorBanner />;
+  return (
+    <>
+      <FilterBar filters={filters} onChange={onFilterChange} />
+      <DataGrid data={employees} />
+      <Pagination />
+    </>
+  );
+}
+```
+
+**Why this split matters:**
+- Presentational components are **testable in Storybook** (pass props, see output)
+- Container components are **testable with mocked APIs** (no DOM assertions)
+- Presentational components are **reusable** (different data, same UI)
+
+---
+
+### Step 5: Data Layer Design
+
+**Answer these for any system design question:**
+
+| Question | Options | Decision Criteria |
+|---|---|---|
+| Where does data come from? | REST / GraphQL / WebSocket | Complexity of data shape, real-time needs |
+| How is it cached? | React Query / in-memory / localStorage | Freshness requirements, offline needs |
+| How fresh must it be? | Real-time (WS) / Stale-while-revalidate / On-demand | User expectation, data sensitivity |
+| How much data? | All at once / Paginated / Virtualized | Dataset size, performance budget |
+| How is it updated? | Optimistic / Pessimistic / Real-time push | UX priority (speed vs accuracy) |
+
+**Decision tree:**
+
+```
+Data size < 1000 items? → Fetch all, filter client-side
+Data size > 1000 items? → Server-side pagination + search
+Real-time needed? → WebSocket or SSE
+Offline needed? → IndexedDB + Background Sync
+Multiple components need same data? → Shared cache (React Query / NgRx)
+Only one component needs it? → Local fetch, no shared state
+```
+
+---
+
+### Step 6: Cross-Cutting Concerns (mention ALL of these)
+
+**This is what separates a senior answer from a junior answer:**
+
+| Concern | What to Mention | 30-Second Answer |
+|---|---|---|
+| **Performance** | Virtual scrolling for large lists, lazy loading, memoization, code splitting | "I'd virtualize any list > 100 items and lazy-load below-fold content" |
+| **Accessibility** | ARIA roles, keyboard navigation, focus management, screen reader announcements | "The component uses semantic HTML, supports full keyboard nav, and announces state changes via aria-live" |
+| **Error handling** | Error boundaries, retry logic, fallback UI, graceful degradation | "Each widget has its own error boundary — one failing doesn't crash others" |
+| **Loading states** | Skeleton loaders (not spinners), progressive loading, optimistic UI | "Skeleton screens for initial load, inline spinners for user-initiated actions" |
+| **i18n** | Externalized strings, RTL support, locale-aware formatting | "All strings from translation files, logical CSS properties for RTL" |
+| **Security** | Input sanitization (DOMPurify), XSS prevention, CSRF on mutations | "User-generated content sanitized via DOMPurify before rendering" |
+| **Testing** | Unit tests for logic, component tests for behaviour, visual regression | "Testing Library for user-centric assertions, Chromatic for visual diffs" |
+| **Responsive** | Breakpoints, touch targets, mobile-first | "Mobile-first CSS, 44px minimum touch targets" |
+
+---
+
+### Step 7: Trade-offs & Alternatives
+
+**Always end with:**
+
+> "The trade-off with this approach is [X]. An alternative would be [Y], which is better when [Z condition]. I chose this approach because [our specific constraint]."
+
+**Examples:**
+
+| Decision | Trade-off | Alternative |
+|---|---|---|
+| Client-side filtering | Fast for small datasets, but won't scale to 100K rows | Server-side filtering with debounced search |
+| WebSocket for real-time | Persistent connection, infrastructure cost | SSE (simpler, auto-reconnect) or polling (simplest) |
+| Optimistic UI | Feels instant, but complex rollback logic | Pessimistic (wait for server) — simpler but slower UX |
+| Virtual scrolling | Smooth performance, but breaks Cmd+F browser search | Pagination (simpler, search works) |
+| CSS-in-JS | Co-located styles, dynamic theming | CSS Modules (zero runtime, but no dynamic theming) |
+
+---
+
+### Quick Template (Use for ANY "Design X" Question)
+
+```
+1. "Let me clarify requirements..." (ask 3-4 questions)
+2. "The scope I'll focus on is..." (in/out boundary)
+3. "Here's the high-level architecture..." (draw the 3-layer diagram)
+4. "The component breakdown is..." (smart/dumb split)
+5. "For data, I'd use..." (fetching + caching + state strategy)
+6. "Cross-cutting concerns I'd address..." (perf, a11y, errors, loading)
+7. "The main trade-off is... an alternative would be..." (show maturity)
+```
+
+---
+
+## ♿ Tab 11: Accessibility Best Practices (Comprehensive Reference)
+
+> IBM takes accessibility seriously — their products must meet WCAG 2.1 AA minimum. Prathap may test your a11y knowledge at the architecture level.
+
+---
+
+### The 4 WCAG Principles (POUR)
+
+| Principle | Meaning | Key Requirements |
+|---|---|---|
+| **P**erceivable | Users can perceive the content | Text alternatives for images, captions for video, sufficient contrast |
+| **O**perable | Users can interact with the UI | Keyboard accessible, no time limits, no seizure triggers |
+| **U**nderstandable | Users can understand the content | Readable text, predictable navigation, error prevention |
+| **R**obust | Works with assistive technologies | Valid HTML, proper ARIA, compatible with screen readers |
+
+---
+
+### Top 10 Accessibility Rules Every Architect Must Enforce
+
+#### 1. Semantic HTML First — ARIA Last
+
+```html
+<!-- ❌ BAD — div with ARIA imitating a button -->
+<div role="button" tabindex="0" onclick="submit()">Submit</div>
+
+<!-- ✅ GOOD — just use a button -->
+<button type="submit">Submit</button>
+```
+
+**Rule:** If a native HTML element does the job, use it. ARIA supplements HTML — it doesn't replace it. First rule of ARIA: don't use ARIA.
+
+#### 2. All Interactive Elements Must Be Keyboard Accessible
+
+```
+Every clickable element must respond to:
+- Enter key (activates links and buttons)
+- Space key (activates buttons, toggles checkboxes)
+- Arrow keys (navigates within widgets: tabs, menus, radio groups)
+- Escape (closes modals, dropdowns, tooltips)
+- Tab (moves between focusable elements)
+```
+
+**In Fero:** `TrqAriaEventManager` automatically adds keyboard handlers to every click event in the entire application. Zero developer effort needed.
+
+#### 3. Focus Management — Modals, Dialogs, Route Changes
+
+```typescript
+// When a modal opens:
+// 1. Move focus INTO the modal (first focusable element)
+// 2. Trap focus inside (Tab cycles within modal, not behind it)
+// 3. On close: return focus to the trigger element
+
+// Fero CDK: TabTrap directive handles this
+<div trqTabTrap>
+  <h2>Modal Title</h2>
+  <input autofocus />  <!-- focus moves here on open -->
+  <button (click)="close()">Close</button>
+</div>
+
+// On route change: move focus to the main content heading
+// Prevents screen reader users from being lost after navigation
+router.events.subscribe(event => {
+  if (event instanceof NavigationEnd) {
+    document.querySelector('h1')?.focus();
+  }
+});
+```
+
+#### 4. Color Contrast — WCAG AA Minimums
+
+| Text Type | Minimum Ratio | Example |
+|---|---|---|
+| Normal text (< 18px) | 4.5:1 | Dark grey (#555) on white (#FFF) = 7.5:1 ✅ |
+| Large text (≥ 18px or 14px bold) | 3:1 | — |
+| UI components (borders, icons) | 3:1 | — |
+| Non-text (decorative) | No requirement | — |
+
+**In Fero:** Design tokens enforce contrast. A token like `darkText (#383838)` on `white (#FFFFFF)` = 11.4:1 ratio. Tokens that fail contrast cannot exist in the system.
+
+#### 5. Form Labels and Error Messages
+
+```html
+<!-- Every input MUST have a visible label -->
+<label for="email">Email Address</label>
+<input id="email" type="email" aria-describedby="email-error" aria-invalid="true" />
+<span id="email-error" role="alert">Please enter a valid email</span>
+```
+
+**Key patterns:**
+- `<label for="id">` associates label with input (clickable label, screen reader announces it)
+- `aria-describedby` links error messages to the input
+- `aria-invalid="true"` tells screen readers the field has an error
+- `role="alert"` makes error announcements immediate (assertive)
+
+#### 6. Images and Icons — Text Alternatives
+
+```html
+<!-- Informative image — needs alt text -->
+<img src="chart.png" alt="Revenue chart showing 15% growth in Q2 2025" />
+
+<!-- Decorative image — hide from screen readers -->
+<img src="divider.svg" alt="" role="presentation" />
+
+<!-- Icon button — needs accessible name -->
+<button aria-label="Close dialog">
+  <svg aria-hidden="true">...</svg>  <!-- hide SVG from screen reader -->
+</button>
+
+<!-- Icon with text — icon is decorative -->
+<button>
+  <svg aria-hidden="true">...</svg>
+  <span>Download</span>  <!-- text provides the accessible name -->
+</button>
+```
+
+#### 7. Live Regions — Dynamic Content Announcements
+
+```html
+<!-- For content that updates without page reload -->
+<!-- polite: waits for screen reader to finish current announcement -->
+<div aria-live="polite" aria-atomic="true">
+  3 search results found
+</div>
+
+<!-- assertive: interrupts immediately (use sparingly — errors only) -->
+<div aria-live="assertive" role="alert">
+  Error: Payment failed. Please try again.
+</div>
+```
+
+**In Flare:** `LiveAnnouncerProvider` manages a queue — assertive announcements jump to front, polite ones queue up. Duplicate texts get a non-breaking space appended to force re-announcement.
+
+#### 8. Skip Navigation Link
+
+```html
+<!-- First focusable element on the page — hidden until focused -->
+<a href="#main-content" class="skip-link">Skip to main content</a>
+
+<nav>... long navigation ...</nav>
+
+<main id="main-content" tabindex="-1">
+  <!-- Main content starts here -->
+</main>
+```
+
+**Why:** Keyboard users and screen reader users shouldn't have to Tab through 50 navigation links on every page load.
+
+#### 9. Tables — Proper Markup for Data
+
+```html
+<!-- Data table (not layout table) -->
+<table>
+  <caption>Employee Salary Report — Q2 2025</caption>
+  <thead>
+    <tr>
+      <th scope="col">Name</th>
+      <th scope="col">Department</th>
+      <th scope="col">Salary</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>John Smith</td>
+      <td>Engineering</td>
+      <td>£85,000</td>
+    </tr>
+  </tbody>
+</table>
+```
+
+**Key:**
+- `<caption>` gives the table an accessible name
+- `scope="col"` tells screen readers which header applies to which cells
+- Screen readers announce: "Name column, row 1, John Smith"
+
+#### 10. Touch Targets — Minimum 44×44px
+
+```css
+/* WCAG 2.5.5 — Target Size */
+button, a, [role="button"] {
+  min-width: 44px;
+  min-height: 44px;
+  /* Or use padding to achieve the size even with small text */
+}
+```
+
+**In Flare:** `ThemeProvider` has `enableTouchTarget` prop that adds `.flr-touch-target` class to body — increases all interactive elements to 44px minimum. In Fero: similar pattern via SCSS utility class.
+
+---
+
+### ARIA Roles Cheat Sheet (Most Common in Enterprise UIs)
+
+| Widget | Role | Required ARIA | Keyboard |
+|---|---|---|---|
+| Modal/Dialog | `role="dialog"` | `aria-modal="true"`, `aria-labelledby` | Escape to close, focus trapped |
+| Dropdown menu | `role="menu"` | `aria-expanded`, `aria-haspopup` | Arrow keys navigate, Escape closes |
+| Tab panel | `role="tablist"` / `role="tab"` / `role="tabpanel"` | `aria-selected`, `aria-controls` | Arrow keys switch tabs |
+| Autocomplete | `role="combobox"` | `aria-expanded`, `aria-activedescendant` | Arrow keys navigate results |
+| Alert/Toast | `role="alert"` | (implicit `aria-live="assertive"`) | No keyboard — announced immediately |
+| Breadcrumb | `role="navigation"` + `aria-label="Breadcrumb"` | `aria-current="page"` on current | Standard link navigation |
+| Progress bar | `role="progressbar"` | `aria-valuenow`, `aria-valuemin`, `aria-valuemax` | — |
+| Toggle | `role="switch"` | `aria-checked` | Space to toggle |
+
+---
+
+### Testing Accessibility — The Full Stack
+
+| Layer | Tool | What It Catches | Coverage |
+|---|---|---|---|
+| **IDE** | axe Accessibility Linter (VS Code) | Missing alt, invalid ARIA | ~15% |
+| **Lint** | eslint-plugin-jsx-a11y / @angular-eslint/template | Code-level a11y violations | ~20% |
+| **Unit test** | jest-axe (`expect(container).toHaveNoViolations()`) | Rendered component violations | ~30% |
+| **Storybook** | @storybook/addon-a11y (axe-core) | Visual + interactive violations | ~35% |
+| **E2E** | Playwright + axe-core (`@axe-core/playwright`) | Full-page audits on real routes | ~40% |
+| **Manual** | Screen reader (NVDA, VoiceOver, JAWS) | Logic, flow, context, usability | ~90% |
+| **Expert audit** | External a11y consultant | Cognitive load, complex patterns | ~95% |
+
+**Key insight:** Automated tools catch **30-40% max**. The rest requires human testing. Budget for it.
+
+---
+
+### Accessibility Architecture Decisions
+
+| Decision | Approach | Rationale |
+|---|---|---|
+| Focus management strategy | CDK service (FocusKeyManager, TabTrap) | Centralized, reusable, not per-component |
+| Screen reader announcements | Global LiveAnnouncer provider | Queue-based, consistent across app |
+| Keyboard navigation | Auto-add via AriaEventManager (Fero) | Zero developer effort for basic keyboard support |
+| Color contrast | Enforce at token level | Impossible to use non-compliant colors |
+| Touch targets | Theme-level toggle (enableTouchTarget) | One switch enables for entire app |
+| RTL support | CSS logical properties + direction provider | Automatic mirroring without component changes |
+| Error announcements | `role="alert"` + `aria-live="assertive"` | Immediate announcement on validation failure |
+| Form validation | Linked via `aria-describedby` + `aria-invalid` | Screen readers announce errors in context |
+
+---
+
+### Interview One-Liner for Accessibility
+
+> "Accessibility is an architecture concern, not a feature. I embed it at four levels: tokens that can't fail contrast, components that handle focus/keyboard by default, CI gates that fail on axe-core violations, and quarterly manual audits with screen readers for the 60% that automation misses. The goal: make it cheaper to do right than to do wrong — accessible-by-default components mean feature teams get WCAG compliance for free."
+
+---
+
 *Good luck tomorrow. Prathap is a seasoned architect — he'll respect depth over breadth. Pick 2-3 areas where you can go deepest (MFE, design systems, security) and steer the conversation there. If he asks something you don't know, say "I haven't implemented that, but here's how I'd evaluate it" — architects who admit gaps are more credible than those who bluff.*
