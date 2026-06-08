@@ -1336,4 +1336,449 @@ const { data: chartData } = useQuery({
 
 ---
 
+---
+
+## 🧱 Tab 9: OOP, Design Patterns, SOLID & Data Structures (10 Questions)
+
+> Since Prathap's background is Application Architect (not purely frontend), expect questions on general software engineering principles — OOP, design patterns, SOLID, and data structures applied to frontend/full-stack contexts.
+
+---
+
+### OOP1. "Explain SOLID principles. Give a frontend example for each."
+
+**Answer:**
+
+| Principle | Meaning | Frontend Example |
+|---|---|---|
+| **S** — Single Responsibility | A class/component does ONE thing | A `<Button>` renders a button. It doesn't fetch data, manage auth, or handle routing. A `PayrollService` handles payroll API calls — it doesn't manage UI state. |
+| **O** — Open/Closed | Open for extension, closed for modification | A `ThemeProvider` is extensible (pass any theme object) without modifying its source. Design tokens: add new tokens without changing existing component code. |
+| **L** — Liskov Substitution | Subtypes must be substitutable for their base types | If `ModalBase` has `open()` and `close()`, then `ConfirmModal extends ModalBase` must also work with `open()` and `close()` without breaking consumers. |
+| **I** — Interface Segregation | Don't force clients to depend on interfaces they don't use | Don't make a `<FormField>` accept 50 props. Split into `<TextField>`, `<SelectField>`, `<DateField>` — each takes only what it needs. |
+| **D** — Dependency Inversion | Depend on abstractions, not concretions | Angular DI: components inject `AuthService` (interface), not `KeycloakAuthService` (concrete). In React: components accept a `fetcher` function prop, not a hardcoded `axios` call. |
+
+**Real project example (Fero):**
+
+> "In Fero, the `TrqResourceBundleService` follows Dependency Inversion — it's an **abstract class**. Each consuming app provides its own concrete implementation (e.g., `PlayResourceBundleService` fetches from JSON files, production fetches from an API). The platform code never knows or cares where translations come from — it only depends on the abstract interface."
+
+---
+
+### OOP2. "What design patterns do you use most in frontend architecture?"
+
+**Answer:**
+
+| Pattern | Where I've Used It | Real Code Example |
+|---|---|---|
+| **Facade** | NgRx store abstraction | `TrqFrameworkFacade` — components call `facade.toggleSideNav()`, never `store.dispatch()` directly. Hides 40+ observables behind a clean API. |
+| **Observer** | RxJS subscriptions, React Context | `facade.body$` — 24 streams combined via `combineLatest`, all subscribers get updates automatically. |
+| **Singleton** | Global services, AI Assist | `AIAssistGlobal.getInstance()` — one instance across the entire app. Angular services with `providedIn: 'root'` are singletons. |
+| **Strategy** | HTTP interceptors, validation | `TrqCacheInterceptor` picks the best cache strategy per URL pattern (memory/session/localStorage). Different strategies, same interface. |
+| **Factory** | Component creation, theming | `getTheme({ baseColor })` — factory function produces different theme objects based on input. Nx generators are factories that produce component boilerplate. |
+| **Decorator** | Angular decorators, HOCs | `@Component()`, `@Injectable()` — add metadata without modifying the class. React HOCs like `withAuth(Component)` add behaviour. |
+| **Compound Component** | Complex UI components | `<DataGrid>` → `<DataGrid.Header />`, `<DataGrid.Body />`, `<DataGrid.Pagination />` — share implicit state via Context. |
+| **Adapter** | API client layer | `lxpToCsod()` in Flare — adapts LXP context format to standard CSOD context format. Different input shapes, same output interface. |
+| **Proxy** | HTTP interceptors | `TrqInFlightInterceptor` is a proxy — sits between the component and the real HTTP call, adding deduplication logic transparently. |
+| **Command** | NgRx actions, undo/redo | `store.dispatch(new ToggleSideNav(true))` — encapsulates an operation as an object. Enables logging, replay, time-travel debugging. |
+
+---
+
+### OOP3. "Explain the Observer pattern. How is it used in Angular vs React?"
+
+**Answer:**
+
+**Observer pattern:** An object (subject) maintains a list of dependents (observers) and notifies them automatically of state changes.
+
+**In Angular (RxJS Observables):**
+```typescript
+// Subject (Observable)
+const isSmallScreen$ = store.select(fromFramework.isSmallScreen);
+
+// Observers (subscribers)
+isSmallScreen$.subscribe(value => this.updateLayout(value));  // Observer 1
+isSmallScreen$.subscribe(value => this.updateNav(value));     // Observer 2
+
+// When state changes → both observers notified automatically
+```
+
+**In React (Context + useState / Signals):**
+```typescript
+// Subject (Context Provider)
+const ThemeContext = createContext(defaultTheme);
+
+// Observers (consuming components)
+function Button() {
+  const theme = useContext(ThemeContext); // Observer — re-renders when theme changes
+  return <button style={{ color: theme.primary }}>Click</button>;
+}
+```
+
+**Key difference:**
+- Angular: **push-based** — Observables push values to subscribers. Explicit subscribe/unsubscribe.
+- React: **pull-based** — components re-render and pull the latest value from context. No explicit subscription.
+
+---
+
+### OOP4. "What's the difference between Composition vs Inheritance? Which do you prefer in frontend?"
+
+**Answer:**
+
+```
+Inheritance: "is-a" relationship
+  AdminDashboard extends Dashboard extends Component
+  → Deep hierarchy, fragile base class, tight coupling
+
+Composition: "has-a" relationship
+  Dashboard = Layout + Widgets + Filters + ErrorBoundary
+  → Flat, flexible, mix-and-match
+```
+
+**I strongly prefer composition.** Here's why:
+
+| Aspect | Inheritance | Composition |
+|---|---|---|
+| Flexibility | Locked to one hierarchy | Mix any behaviours together |
+| Reuse | Must inherit entire base class | Pick only what you need |
+| Testing | Must test entire hierarchy | Test each piece in isolation |
+| Refactoring | Change base → breaks all children | Change one piece → others unaffected |
+
+**Real examples from my work:**
+
+```typescript
+// Angular — Composition via DI (not inheritance)
+@Component({...})
+class PayrollDashboard {
+  constructor(
+    private auth: AuthService,       // composed in
+    private cache: CacheService,     // composed in
+    private logger: LoggerService    // composed in
+  ) {}
+}
+// NOT: class PayrollDashboard extends AuthenticatedCachedLoggedComponent
+
+// React — Composition via hooks
+function PayrollDashboard() {
+  const auth = useAuth();            // composed in
+  const { data } = useQuery(...);   // composed in
+  const logger = useLogger();        // composed in
+}
+// NOT: class PayrollDashboard extends React.Component with mixins
+```
+
+**The React team literally removed mixins and class inheritance patterns in favour of hooks (composition).** Angular's DI is also composition — you inject capabilities, not inherit them.
+
+---
+
+### OOP5. "Explain the Strategy pattern with a real frontend use case."
+
+**Answer:**
+
+**Strategy pattern:** Define a family of algorithms, encapsulate each one, and make them interchangeable. The client picks which strategy to use at runtime.
+
+**Real example — Fero's caching system:**
+
+```typescript
+// The Strategy interface
+interface CacheStorage {
+  get(key: string): any;
+  set(key: string, value: any): void;
+  remove(key: string): void;
+}
+
+// Strategy 1: Memory (fast, lost on refresh)
+class MemoryStorage implements CacheStorage {
+  private store = new Map();
+  get(key) { return this.store.get(key); }
+  set(key, value) { this.store.set(key, value); }
+  remove(key) { this.store.delete(key); }
+}
+
+// Strategy 2: Session Storage (survives navigation, lost on tab close)
+class SessionCacheStorage implements CacheStorage {
+  get(key) { return JSON.parse(sessionStorage.getItem(key)); }
+  set(key, value) { sessionStorage.setItem(key, JSON.stringify(value)); }
+  remove(key) { sessionStorage.removeItem(key); }
+}
+
+// Strategy 3: Local Storage (persists across sessions)
+class LocalCacheStorage implements CacheStorage {
+  get(key) { return JSON.parse(localStorage.getItem(key)); }
+  set(key, value) { localStorage.setItem(key, JSON.stringify(value)); }
+  remove(key) { localStorage.removeItem(key); }
+}
+
+// The Context — picks strategy based on configuration
+class Cache {
+  private storage: CacheStorage;
+
+  constructor(mode: 'memory' | 'session' | 'local') {
+    switch(mode) {
+      case 'memory': this.storage = new MemoryStorage(); break;
+      case 'session': this.storage = new SessionCacheStorage(); break;
+      case 'local': this.storage = new LocalCacheStorage(); break;
+    }
+  }
+
+  get(key: string) { return this.storage.get(key); }
+  set(key: string, value: any) { this.storage.set(key, value); }
+}
+```
+
+In Fero, different URL patterns use different cache strategies:
+- `/api/reference-data/*` → localStorage (rarely changes)
+- `/api/employees/*` → sessionStorage (changes per session)
+- `/api/payroll/run/*` → memory only (sensitive, never persisted)
+
+---
+
+### DSA1. "What data structures do you use most in frontend development?"
+
+**Answer:**
+
+| Data Structure | Frontend Use Case | Example |
+|---|---|---|
+| **Map** | O(1) key-value lookup | Cache stores, entity normalization (`Map<employeeId, Employee>`) |
+| **Set** | O(1) unique membership check | Selected row IDs in a datagrid, deduplication of notifications |
+| **Array** | Ordered list rendering | Any `*ngFor` / `.map()` list render |
+| **Stack (Array)** | Undo/redo history | Command pattern — push actions, pop to undo |
+| **Queue (Array)** | Notification toast queue | FIFO processing — oldest toast dismissed first |
+| **Tree** | Navigation hierarchy, DOM, org chart | Fero's `TreeModel` for parsing nav JSON into a traversable tree |
+| **Trie** | Autocomplete/search suggestions | Prefix matching — "pay" matches "payroll", "payment", "payslip" |
+| **LRU Cache (Map)** | API response caching with bounded memory | Keep last 100 search results, evict oldest on overflow |
+| **Graph** | Dependency graphs, workflow builders | Nx dependency graph; org chart with reporting relationships |
+| **WeakMap** | Metadata on DOM elements without preventing GC | Associate data with elements without memory leaks |
+
+---
+
+### DSA2. "Implement an LRU Cache. Where would you use it in a frontend app?"
+
+**Answer:**
+
+```typescript
+class LRUCache<K, V> {
+  private cache = new Map<K, V>();
+
+  constructor(private capacity: number) {}
+
+  get(key: K): V | undefined {
+    if (!this.cache.has(key)) return undefined;
+
+    // Move to end (most recently used)
+    const value = this.cache.get(key)!;
+    this.cache.delete(key);
+    this.cache.set(key, value);
+    return value;
+  }
+
+  set(key: K, value: V): void {
+    // If key exists, delete first (to update position)
+    if (this.cache.has(key)) {
+      this.cache.delete(key);
+    }
+
+    // Evict oldest if at capacity
+    if (this.cache.size >= this.capacity) {
+      const oldestKey = this.cache.keys().next().value;
+      this.cache.delete(oldestKey);
+    }
+
+    this.cache.set(key, value);
+  }
+
+  has(key: K): boolean {
+    return this.cache.has(key);
+  }
+
+  get size(): number {
+    return this.cache.size;
+  }
+}
+```
+
+**Why `Map` works here:** JavaScript `Map` maintains insertion order. `keys().next().value` gives the oldest entry. Moving to end = delete + re-insert.
+
+**Frontend use cases:**
+- **Search autocomplete** — cache last 50 search queries → instant results for repeated searches
+- **API response caching** — cache last 100 API responses, evict least-recently-accessed
+- **Image/avatar cache** — keep last N user avatars in memory, evict when scrolling long lists
+- **Route component cache** — keep last 5 visited page components mounted (like Vue's `keep-alive`)
+
+---
+
+### DSA3. "How would you efficiently store and retrieve hierarchical data (like an org chart or navigation tree) on the frontend?"
+
+**Answer:**
+
+**The problem:** Navigation/org data comes from the API as a flat array or nested JSON. You need to traverse it (find a node, get path to root, get children) efficiently.
+
+**Approach 1: Nested tree (Fero's approach):**
+
+```typescript
+// API returns nested JSON
+interface NavNode {
+  id: string;
+  label: string;
+  href: string;
+  children: NavNode[];
+}
+
+// Fero uses TreeModel library to parse it into a traversable tree
+import TreeModel from 'tree-model';
+const tree = new TreeModel();
+const root = tree.parse(navJson);
+
+// Operations:
+root.first(node => node.model.id === 'payroll');       // O(n) find
+root.all(node => node.model.href.startsWith('/hr'));   // O(n) filter
+node.getPath();  // O(depth) — path from root to this node (for breadcrumbs)
+```
+
+**Approach 2: Normalized flat map + parent references (better for large datasets):**
+
+```typescript
+// Normalize into a Map for O(1) lookup
+interface FlatNode {
+  id: string;
+  label: string;
+  parentId: string | null;
+  childIds: string[];
+}
+
+const nodeMap = new Map<string, FlatNode>();  // O(1) lookup by ID
+
+// Build breadcrumb (walk up parent chain) — O(depth)
+function getBreadcrumb(nodeId: string): FlatNode[] {
+  const path: FlatNode[] = [];
+  let current = nodeMap.get(nodeId);
+  while (current) {
+    path.unshift(current);
+    current = current.parentId ? nodeMap.get(current.parentId) : undefined;
+  }
+  return path;
+}
+
+// Get children — O(1)
+function getChildren(nodeId: string): FlatNode[] {
+  const node = nodeMap.get(nodeId)!;
+  return node.childIds.map(id => nodeMap.get(id)!);
+}
+```
+
+**Trade-off:**
+
+| Approach | Pros | Cons |
+|---|---|---|
+| Nested tree | Natural structure, easy to render recursively | O(n) search, deep cloning for immutability |
+| Flat map + parent refs | O(1) lookup, easy to update single nodes | Must maintain parent/child relationships manually |
+
+**In Fero:** We use TreeModel (nested) because the nav tree is small (~100 nodes) and read-heavy (render menus, build breadcrumbs). The O(n) search cost is negligible for 100 nodes. For a 10,000-node org chart, I'd use the flat map approach.
+
+---
+
+### DSA4. "Explain the Pub/Sub pattern. How does it differ from Observer, and where have you used it?"
+
+**Answer:**
+
+```
+Observer: Subject knows its observers directly
+  Component → subscribes to → Observable
+  (tight coupling — subject references observers)
+
+Pub/Sub: Publishers and subscribers don't know each other — a broker/bus mediates
+  Publisher → event bus → Subscriber
+  (loose coupling — neither knows the other exists)
+```
+
+| Aspect | Observer | Pub/Sub |
+|---|---|---|
+| Coupling | Subject knows observers | Decoupled via message broker |
+| Use case | Component subscribing to a data stream | Cross-MFE communication, plugin systems |
+| Example | RxJS Observable, React Context | NgRx actions, CustomEvent on window, event bus |
+
+**Where I've used Pub/Sub:**
+
+1. **NgRx actions** — dispatching `RefreshNavAction` is pub/sub. The dispatcher doesn't know which reducers/effects will handle it. The store is the broker.
+
+2. **Cross-MFE communication in FeroUI** — MFEs communicate with the host shell via events:
+```typescript
+// Publisher (MFE requests token refresh)
+eventBus.emit('appshell:refreshAccessToken');
+
+// Subscriber (Shell handles it — MFE doesn't know how)
+eventBus.on('appshell:retrievedAccessToken:success', (token) => {
+  updateContext(token);
+});
+```
+
+3. **Custom DOM events** — framework-agnostic communication:
+```typescript
+// Any framework can publish
+window.dispatchEvent(new CustomEvent('user:logout', { detail: { reason: 'timeout' } }));
+
+// Any framework can subscribe
+window.addEventListener('user:logout', (e) => clearState());
+```
+
+---
+
+### DSA5. "What is memoization? How and when do you apply it in frontend code?"
+
+**Answer:**
+
+**Memoization** = caching the result of a function based on its inputs. If the same inputs are provided again, return the cached result instead of recomputing.
+
+**Where it's used in frontend:**
+
+| Location | Mechanism | What It Caches |
+|---|---|---|
+| NgRx selectors | `createSelector()` | Derived state — only recomputes when input state changes |
+| React components | `React.memo()` | Component render output — skips re-render if props unchanged |
+| React hooks | `useMemo()` | Expensive computed values — only recomputes when dependencies change |
+| React callbacks | `useCallback()` | Function reference — prevents child re-renders |
+| Fero framework | `TrqMemoizePipe` | Template expression results — caches pure function outputs |
+| API responses | LRU cache | Network responses — avoids redundant HTTP calls |
+
+**Implementation:**
+
+```typescript
+// Generic memoize function
+function memoize<T extends (...args: any[]) => any>(fn: T): T {
+  const cache = new Map<string, ReturnType<T>>();
+  
+  return ((...args: any[]) => {
+    const key = JSON.stringify(args);
+    if (cache.has(key)) return cache.get(key);
+    
+    const result = fn(...args);
+    cache.set(key, result);
+    return result;
+  }) as T;
+}
+
+// Usage
+const expensiveCalc = memoize((employees: Employee[]) => {
+  return employees.reduce((sum, emp) => sum + emp.salary, 0); // O(n)
+});
+
+expensiveCalc(employees); // computes (slow)
+expensiveCalc(employees); // returns cached (instant)
+```
+
+**When NOT to memoize:**
+- Cheap computations (adding two numbers — memoization overhead > computation cost)
+- Functions with side effects (API calls — you WANT to re-execute)
+- Functions called with always-new arguments (cache never hits — wasted memory)
+
+**NgRx selector memoization (Fero):**
+```typescript
+// createSelector memoizes automatically — only recomputes when inputs change
+export const getPrimaryNavItems = createSelector(
+  getPrimaryNodes,    // input selector 1
+  getSortedNavFlag,   // input selector 2
+  (nodes, sorted) => {  // only runs when nodes OR sorted changes
+    return sorted ? nodes.sort(...) : nodes;
+  }
+);
+```
+
+---
+
 *Good luck tomorrow. Prathap is a seasoned architect — he'll respect depth over breadth. Pick 2-3 areas where you can go deepest (MFE, design systems, security) and steer the conversation there. If he asks something you don't know, say "I haven't implemented that, but here's how I'd evaluate it" — architects who admit gaps are more credible than those who bluff.*
